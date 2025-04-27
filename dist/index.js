@@ -11,5 +11,6 @@ const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 app.use("/user", user_1.userRouter);
-console.log(process.env.ankushraj);
-app.listen(3002);
+const port = process.env.port;
+console.log("service running on port " + port);
+app.listen(3000);

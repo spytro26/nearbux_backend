@@ -149,7 +149,7 @@ catch(e){
  userRouter.post("/info", async (req, res) : Promise <any> => {
   const { phoneNumber, area, pinCode } = req.body;
 
- if(!phoneNumber || area || pinCode) {
+ if(!phoneNumber || !area || !pinCode) {
   return res.status(400).json({message : "invalid request"});
  }
 
@@ -182,11 +182,17 @@ catch(e){
   }
 });
 
-
+let c = 0;
 userRouter.post("/signin", async (req, res) : Promise <any> =>{
-  console.log('hitted');
+ c = c+1; 
+  console.log('hitted' + c + "times");
+
    const {  userInput , password } = req.body ; 
    let  foundUser = null; 
+
+
+
+   console.log(userInput, password);
 
    if(userInput.length<9){
      foundUser  = await prisma.user.findFirst({
@@ -196,8 +202,7 @@ userRouter.post("/signin", async (req, res) : Promise <any> =>{
         
       }
      })
-   };
-    if (userInput.length===10){
+   }else {
      foundUser = await prisma.user.findFirst({
       where : {
         phone : userInput,

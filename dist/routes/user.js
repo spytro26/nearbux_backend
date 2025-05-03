@@ -116,6 +116,9 @@ exports.userRouter.post("/validate", (req, res) => __awaiter(void 0, void 0, voi
 }));
 exports.userRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { phoneNumber, area, pinCode } = req.body;
+    if (!phoneNumber || !area || !pinCode) {
+        return res.status(400).json({ message: "invalid request" });
+    }
     try {
         const existingUser = yield index_1.prisma.user.findUnique({
             where: {
@@ -141,10 +144,13 @@ exports.userRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0,
         res.status(400).json({ message: "Something went wrong", error });
     }
 }));
+let c = 0;
 exports.userRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('hitted');
+    c = c + 1;
+    console.log('hitted' + c + "times");
     const { userInput, password } = req.body;
     let foundUser = null;
+    console.log(userInput, password);
     if (userInput.length < 9) {
         foundUser = yield index_1.prisma.user.findFirst({
             where: {
@@ -153,8 +159,7 @@ exports.userRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 
             }
         });
     }
-    ;
-    if (userInput.length === 10) {
+    else {
         foundUser = yield index_1.prisma.user.findFirst({
             where: {
                 phone: userInput,

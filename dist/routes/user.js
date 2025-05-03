@@ -17,6 +17,7 @@ const express_1 = __importDefault(require("express"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 require("dotenv/config");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const index_1 = require("../index");
 const zod_1 = require("zod");
 const bcrypt_1 = __importDefault(require("bcrypt"));
@@ -27,14 +28,42 @@ exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 
     const user = zod_1.z.object({
         name: zod_1.z.string().min(3).max(100),
         username: zod_1.z.string(),
-        password: zod_1.z.string().min(8).max(16).regex(/[A-Z]/).regex(/[\W_]/)
+        password: zod_1.z.string().min(5).max(16)
     });
     const bul = user.safeParse(req.body);
     if (!bul.success) {
-        return res.status(400).json({ error: bul.error.errors });
+        // bul.error.errors
+        return res.status(400).json({ message: "invalid input" });
     }
     ;
     console.log("before try");
+    try {
+        const already = yield index_1.prisma.user.findFirst({
+            where: {
+                phone: phoneNumber
+            }
+        });
+        if (already) {
+            return res.status(400).json({ message: "phone number already registered" });
+        }
+    }
+    catch (e) {
+        console.error("error " + e);
+    }
+    ;
+    try {
+        const already = yield index_1.prisma.user.findFirst({
+            where: {
+                username
+            }
+        });
+        if (already) {
+            return res.status(400).json({ message: "username already taken " });
+        }
+    }
+    catch (e) {
+        console.error("error " + e);
+    }
     try {
         const hashedpass = yield bcrypt_1.default.hash(password, 3);
         yield index_1.prisma.user.create({
@@ -46,7 +75,7 @@ exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 
             }
         });
         console.log("user signed up");
-        res.json({
+        res.status(200).json({
             message: "you are succesfully signed up ",
         });
     }
@@ -61,6 +90,29 @@ exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 
 exports.userRouter.get("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log("request arrived");
     res.status(400).json({ message: "hiihi" });
+}));
+exports.userRouter.post("/validate", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { username, phoneNumber } = req.body;
+    try {
+        const alreadyUsername = yield index_1.prisma.user.findFirst({ where: {
+                username
+            } });
+        if (alreadyUsername) {
+            return res.status(200).json({ usernameExists: true, phoneExists: false });
+        }
+        const alreadyPhone = yield index_1.prisma.user.findFirst({
+            where: {
+                phone: phoneNumber
+            }
+        });
+        if (alreadyPhone) {
+            return res.status(200).json({ usernameExists: false, phoneExists: true });
+        }
+        return res.status(200).json({ usernameExists: false, phoneExists: false });
+    }
+    catch (e) {
+        return res.status(400).json({ message: "error while validating" });
+    }
 }));
 exports.userRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { phoneNumber, area, pinCode } = req.body;
@@ -88,4 +140,39 @@ exports.userRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0,
         console.error(error);
         res.status(400).json({ message: "Something went wrong", error });
     }
+}));
+exports.userRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('hitted');
+    const { userInput, password } = req.body;
+    let foundUser = null;
+    if (userInput.length < 9) {
+        foundUser = yield index_1.prisma.user.findFirst({
+            where: {
+                // @ts-ignore
+                username: userInput,
+            }
+        });
+    }
+    ;
+    if (userInput.length === 10) {
+        foundUser = yield index_1.prisma.user.findFirst({
+            where: {
+                phone: userInput,
+            }
+        });
+    }
+    if (!foundUser) {
+        return res.status(500).json({ message: "user not found" });
+    }
+    const validpass = yield bcrypt_1.default.compare(password, foundUser.password);
+    if (!validpass) {
+        return res.status(500).json({ message: "invalid password" });
+    }
+    ;
+    const jwt_pass = process.env.user_secret;
+    if (!jwt_pass) {
+        return;
+    }
+    const token = jsonwebtoken_1.default.sign({ phone: foundUser.phone }, jwt_pass);
+    res.json({ token });
 }));

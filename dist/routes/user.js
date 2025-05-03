@@ -17,46 +17,75 @@ const express_1 = __importDefault(require("express"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 require("dotenv/config");
-const twilio_1 = require("twilio");
+const index_1 = require("../index");
+const zod_1 = require("zod");
+const bcrypt_1 = __importDefault(require("bcrypt"));
 exports.userRouter = express_1.default.Router();
 exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, username, password, phonenumber } = req.body;
-}));
-const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SERVICE_SID, PORT } = process.env;
-if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_VERIFY_SERVICE_SID) {
-    throw new Error('Twilio credentials are not set in environment variables.');
-}
-const client = new twilio_1.Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-exports.userRouter.post('/send-otp', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { phoneNumber } = req.body;
+    console.log("request arrived");
+    const { name, username, password, phoneNumber } = req.body;
+    const user = zod_1.z.object({
+        name: zod_1.z.string().min(3).max(100),
+        username: zod_1.z.string(),
+        password: zod_1.z.string().min(8).max(16).regex(/[A-Z]/).regex(/[\W_]/)
+    });
+    const bul = user.safeParse(req.body);
+    if (!bul.success) {
+        return res.status(400).json({ error: bul.error.errors });
+    }
+    ;
+    console.log("before try");
     try {
-        const verification = yield client.verify
-            .services(TWILIO_VERIFY_SERVICE_SID)
-            .verifications.create({ to: phoneNumber, channel: 'sms' });
-        res.status(200).json({ status: verification.status });
+        const hashedpass = yield bcrypt_1.default.hash(password, 3);
+        yield index_1.prisma.user.create({
+            data: {
+                name: name,
+                username: username,
+                password: hashedpass,
+                phone: phoneNumber,
+            }
+        });
+        console.log("user signed up");
+        res.json({
+            message: "you are succesfully signed up ",
+        });
+    }
+    catch (e) {
+        res.json({
+            message: "an error while hashing the password ",
+        });
+    }
+    console.log(username, name, password, phoneNumber);
+    console.log(typeof (username), typeof (name), typeof (password), typeof (phoneNumber));
+}));
+exports.userRouter.get("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("request arrived");
+    res.status(400).json({ message: "hiihi" });
+}));
+exports.userRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { phoneNumber, area, pinCode } = req.body;
+    try {
+        const existingUser = yield index_1.prisma.user.findUnique({
+            where: {
+                phone: phoneNumber,
+            },
+        });
+        if (!existingUser) {
+            return res.status(400).json({ message: "User not found with this phone number." });
+        }
+        const updatedUser = yield index_1.prisma.user.update({
+            where: {
+                phone: phoneNumber,
+            },
+            data: {
+                local_area: area,
+                pin: pinCode,
+            },
+        });
+        res.status(200).json({ message: "User updated successfully", user: updatedUser });
     }
     catch (error) {
-        console.error('Twilio Error:', error); // <-- PRINT FULL ERROR
-        //@ts-ignore
-        res.status(500).json({ error: error.message || 'Failed to send OTP' }); // <-- SEND FULL MESSAGE
-    }
-}));
-// Endpoint to verify OTP
-exports.userRouter.post('/verify-otp', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { phoneNumber, code } = req.body;
-    try {
-        const verificationCheck = yield client.verify
-            .services(TWILIO_VERIFY_SERVICE_SID)
-            .verificationChecks.create({ to: phoneNumber, code });
-        if (verificationCheck.status === 'approved') {
-            // Proceed to save user data to the database
-            res.status(200).json({ message: 'Phone number verified successfully.' });
-        }
-        else {
-            res.status(400).json({ error: 'Invalid OTP.' });
-        }
-    }
-    catch (error) {
-        res.status(500).json({ error: 'Failed to verify OTP' });
+        console.error(error);
+        res.status(400).json({ message: "Something went wrong", error });
     }
 }));

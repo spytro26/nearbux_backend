@@ -1,10 +1,16 @@
 // Importing required types and modules from "express" and "jsonwebtoken".
 import { NextFunction, Request, Response } from "express";
-import { JWT_SECRET } from "./config"; // Importing the JWT secret key from a configuration file.
+ // Importing the JWT secret key from a configuration file.
 import jwt from "jsonwebtoken"; // Importing the jsonwebtoken library for token verification.
+const JWT_SECRET = process.env.user_secret || "";
 
 // Middleware to validate user authentication using a JWT token.
 export const userMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+
+if(!JWT_SECRET || JWT_SECRET.length<2){
+    return res.status(400).json({message : "jwt secret not found"})
+}
+
     // Extract the "authorization" header from the request.
     const header = req.headers["authorization"];
     

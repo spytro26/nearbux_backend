@@ -235,9 +235,51 @@ userRouter.post("/signin", async (req, res) : Promise <any> =>{
 
 
 
+
     
 
 
 
 
 })
+
+
+
+userRouter.post("/updatepass", async(req, res)  : Promise<any> =>{
+  const {phoneNumber, newPassword} = req.body;
+  
+
+  const already = await prisma.user.findFirst({
+    where : {
+      phone : phoneNumber
+    }
+  });
+
+  if(already){
+    try {
+       const hash = await bcrypt.hash(newPassword , 3);
+
+      await prisma.user.update({
+        where: {
+          phone: phoneNumber,
+        },
+        data: {
+          password: hash,
+        },
+      });
+      console.log("db updated");
+      return res.status(200).json({message : "password updated succefully"});
+
+    }catch(e : any ){
+      console.log("error while updating db" + e.message);
+    };
+   
+
+
+  }
+  else {
+    return res.status(400).json({messsage :"user not found "});
+  }
+
+
+});

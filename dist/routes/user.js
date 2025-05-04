@@ -181,3 +181,33 @@ exports.userRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 
     const token = jsonwebtoken_1.default.sign({ phone: foundUser.phone }, jwt_pass);
     res.json({ token });
 }));
+exports.userRouter.post("/updatepass", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { phoneNumber, newPassword } = req.body;
+    const already = yield index_1.prisma.user.findFirst({
+        where: {
+            phone: phoneNumber
+        }
+    });
+    if (already) {
+        try {
+            const hash = yield bcrypt_1.default.hash(newPassword, 3);
+            yield index_1.prisma.user.update({
+                where: {
+                    phone: phoneNumber,
+                },
+                data: {
+                    password: hash,
+                },
+            });
+            console.log("db updated");
+            return res.status(200).json({ message: "password updated succefully" });
+        }
+        catch (e) {
+            console.log("error while updating db" + e.message);
+        }
+        ;
+    }
+    else {
+        return res.status(400).json({ messsage: "user not found " });
+    }
+}));

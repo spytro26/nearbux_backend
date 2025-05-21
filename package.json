@@ -17,14 +17,19 @@
     "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9",
     "bcrypt": "^5.1.1",
+    "cloudinary": "^2.6.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "firebase-admin": "^13.3.0",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2",
     "prisma": "^6.6.0",
     "twilio": "^5.5.2",
     "typescript": "^5.8.3",
     "zod": "^3.24.3"
+  },
+  "devDependencies": {
+    "@types/multer": "^1.4.12"
   }
 }

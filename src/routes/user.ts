@@ -170,7 +170,7 @@ catch(e){
         phone: phoneNumber,
       },
       data: {
-        local_area: area,
+        localArea: area,
         pin: pinCode,
       },
     });
@@ -229,7 +229,7 @@ userRouter.post("/signin", async (req, res) : Promise <any> =>{
         return ; 
 
        }
-       const token = jwt.sign({phone : foundUser.phone}, jwt_pass);
+       const token = jwt.sign({id : foundUser.id}, jwt_pass);
        res.json({ token }); 
 
 

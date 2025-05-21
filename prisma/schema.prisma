@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-
 generator client {
   provider = "prisma-client-js"
- 
 }
 
 datasource db {
@@ -10,16 +7,123 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model user {
-  id Int @id @default(autoincrement()) 
-  name String
+model User {
+  id             Int     @id @default(autoincrement())
+  name           String
+  username       String  @unique
+  phone          String  @unique
+  password       String
+  pin            String?
+  localArea      String?
+  coinsAvailable Int?    @default(0)
+
+  orders        Order[] @relation("UserOrders")
+  coinsReceived Coin[]  @relation("ToUser")
+  cartItems     Cart[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ShopKeeper {
+  id       Int    @id @default(autoincrement())
+  phone    String @unique
+  name     String
   username String @unique
-  phone String @unique
-  password String 
-  pin String ?
-  local_area String ?
-  coins_available Int ? @default(0)
-  
+  password String
 
+  shops Shop[]
+  adver Adver[]
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Shop {
+  id        Int     @id @default(autoincrement())
+  name String
+  rating    Int @default(0)
+  tagline   String
+  image     String?
+  pin       String
+  localArea String
+  value     String
+
+  ownerId Int  
+  owner   ShopKeeper @relation(fields: [ownerId], references: [id])
+
+  orders    Order[]   @relation("ShopOrders")
+  products  Product[]
+  coinsSent Coin[]    @relation("FromShop")
+  adver     Adver[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id        Int @id @default(autoincrement())
+  soldById  Int
+  soldToId  Int
+  productId Int
+
+  consumer User    @relation("UserOrders", fields: [soldToId], references: [id])
+  seller   Shop    @relation("ShopOrders", fields: [soldById], references: [id])
+  product  Product @relation(fields: [productId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Coin {
+  id        Int    @id @default(autoincrement())
+  transFrom Int
+  transTo   Int
+  volume    String
+
+  fromShop Shop @relation("FromShop", fields: [transFrom], references: [id])
+  toUser   User @relation("ToUser", fields: [transTo], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id     Int     @id @default(autoincrement())
+  name   String
+  image  String?
+  shopId Int
+  price  String
+
+  shop      Shop    @relation(fields: [shopId], references: [id])
+  orders    Order[]
+  cartItems Cart[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Cart {
+  id        Int @id @default(autoincrement())
+  productId Int
+  userId    Int
+
+  product Product @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Adver {
+  id        Int      @id @default(autoincrement())
+  image     String?
+  title     String
+  message   String
+  shopId    Int
+  shop      Shop     @relation(fields: [shopId], references: [id])
+  createdAt DateTime @default(now())
+
+  ShopKeeper   ShopKeeper? @relation(fields: [shopKeeperId], references: [id])
+  shopKeeperId Int?
 }

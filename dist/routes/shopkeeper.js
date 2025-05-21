@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userRouter = void 0;
+exports.shopRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
@@ -21,9 +21,8 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const index_1 = require("../index");
 const zod_1 = require("zod");
 const bcrypt_1 = __importDefault(require("bcrypt"));
-exports.userRouter = express_1.default.Router();
-exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("request arrived");
+exports.shopRouter = express_1.default.Router();
+exports.shopRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, username, password, phoneNumber } = req.body;
     const user = zod_1.z.object({
         name: zod_1.z.string().min(3).max(100),
@@ -36,9 +35,8 @@ exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 
         return res.status(400).json({ message: "invalid input" });
     }
     ;
-    console.log("before try");
     try {
-        const already = yield index_1.prisma.user.findFirst({
+        const already = yield index_1.prisma.shopKeeper.findFirst({
             where: {
                 phone: phoneNumber
             }
@@ -52,7 +50,7 @@ exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 
     }
     ;
     try {
-        const already = yield index_1.prisma.user.findFirst({
+        const already = yield index_1.prisma.shopKeeper.findFirst({
             where: {
                 username
             }
@@ -66,7 +64,7 @@ exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 
     }
     try {
         const hashedpass = yield bcrypt_1.default.hash(password, 3);
-        yield index_1.prisma.user.create({
+        yield index_1.prisma.shopKeeper.create({
             data: {
                 name: name,
                 username: username,
@@ -84,83 +82,20 @@ exports.userRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 
             message: "an error while hashing the password ",
         });
     }
-    console.log(username, name, password, phoneNumber);
-    console.log(typeof (username), typeof (name), typeof (password), typeof (phoneNumber));
 }));
-exports.userRouter.get("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("request arrived");
-    res.status(400).json({ message: "hiihi" });
-}));
-exports.userRouter.post("/validate", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { username, phoneNumber } = req.body;
-    try {
-        const alreadyUsername = yield index_1.prisma.user.findFirst({ where: {
-                username
-            } });
-        if (alreadyUsername) {
-            return res.status(200).json({ usernameExists: true, phoneExists: false });
-        }
-        const alreadyPhone = yield index_1.prisma.user.findFirst({
-            where: {
-                phone: phoneNumber
-            }
-        });
-        if (alreadyPhone) {
-            return res.status(200).json({ usernameExists: false, phoneExists: true });
-        }
-        return res.status(200).json({ usernameExists: false, phoneExists: false });
-    }
-    catch (e) {
-        return res.status(400).json({ message: "error while validating" });
-    }
-}));
-exports.userRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { phoneNumber, area, pinCode } = req.body;
-    if (!phoneNumber || !area || !pinCode) {
-        return res.status(400).json({ message: "invalid request" });
-    }
-    try {
-        const existingUser = yield index_1.prisma.user.findUnique({
-            where: {
-                phone: phoneNumber,
-            },
-        });
-        if (!existingUser) {
-            return res.status(400).json({ message: "User not found with this phone number." });
-        }
-        const updatedUser = yield index_1.prisma.user.update({
-            where: {
-                phone: phoneNumber,
-            },
-            data: {
-                localArea: area,
-                pin: pinCode,
-            },
-        });
-        res.status(200).json({ message: "User updated successfully", user: updatedUser });
-    }
-    catch (error) {
-        console.error(error);
-        res.status(400).json({ message: "Something went wrong", error });
-    }
-}));
-let c = 0;
-exports.userRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    c = c + 1;
-    console.log('hitted' + c + "times");
+exports.shopRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userInput, password } = req.body;
     let foundUser = null;
     console.log(userInput, password);
     if (userInput.length < 9) {
-        foundUser = yield index_1.prisma.user.findFirst({
+        foundUser = yield index_1.prisma.shopKeeper.findUnique({
             where: {
-                // @ts-ignore
                 username: userInput,
             }
         });
     }
     else {
-        foundUser = yield index_1.prisma.user.findFirst({
+        foundUser = yield index_1.prisma.shopKeeper.findUnique({
             where: {
                 phone: userInput,
             }
@@ -174,16 +109,40 @@ exports.userRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 
         return res.status(500).json({ message: "invalid password" });
     }
     ;
-    const jwt_pass = process.env.user_secret;
+    const jwt_pass = process.env.buis_secret;
     if (!jwt_pass) {
         return;
     }
     const token = jsonwebtoken_1.default.sign({ id: foundUser.id }, jwt_pass);
-    res.json({ token });
+    res.status(200).json({ token });
 }));
-exports.userRouter.post("/updatepass", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.shopRouter.post("/validate", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { username, phoneNumber } = req.body;
+    try {
+        const alreadyUsername = yield index_1.prisma.shopKeeper.findFirst({ where: {
+                username
+            } });
+        if (alreadyUsername) {
+            return res.status(200).json({ usernameExists: true, phoneExists: false });
+        }
+        const alreadyPhone = yield index_1.prisma.shopKeeper.findFirst({
+            where: {
+                phone: phoneNumber
+            }
+        });
+        if (alreadyPhone) {
+            return res.status(200).json({ usernameExists: false, phoneExists: true });
+        }
+        return res.status(200).json({ usernameExists: false, phoneExists: false });
+    }
+    catch (e) {
+        console.log(e);
+        return res.status(400).json({ message: "error while validating" });
+    }
+}));
+exports.shopRouter.post("/updatepass", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { phoneNumber, newPassword } = req.body;
-    const already = yield index_1.prisma.user.findFirst({
+    const already = yield index_1.prisma.shopKeeper.findFirst({
         where: {
             phone: phoneNumber
         }
@@ -191,8 +150,10 @@ exports.userRouter.post("/updatepass", (req, res) => __awaiter(void 0, void 0, v
     if (already) {
         try {
             const hash = yield bcrypt_1.default.hash(newPassword, 3);
-            yield index_1.prisma.user.update({
+            yield index_1.prisma.shopKeeper.update({
+                // @ts-ignore
                 where: {
+                    //@ts-ignore
                     phone: phoneNumber,
                 },
                 data: {
@@ -209,5 +170,40 @@ exports.userRouter.post("/updatepass", (req, res) => __awaiter(void 0, void 0, v
     }
     else {
         return res.status(400).json({ messsage: "user not found " });
+    }
+}));
+exports.shopRouter.post("/id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { phone } = req.body;
+    let keeper;
+    try {
+        keeper = yield index_1.prisma.shopKeeper.findFirst({
+            where: {
+                phone: phone,
+            }
+        });
+    }
+    catch (e) {
+        console.log(e);
+    }
+    return res.status(200).json({ message: keeper === null || keeper === void 0 ? void 0 : keeper.id });
+}));
+exports.shopRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shopName, tagline, pin, localArea, coinValue, ownerId } = req.body;
+    try {
+        const shop = yield index_1.prisma.shop.create({
+            data: {
+                name: shopName,
+                tagline,
+                pin,
+                localArea,
+                value: coinValue,
+                ownerId,
+            }
+        });
+        return res.status(200).json({ message: "added succefully", id: shop.id });
+    }
+    catch (e) {
+        console.log(e);
+        res.status(400).json({ message: "error while adding info" });
     }
 }));

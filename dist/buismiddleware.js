@@ -12,10 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.userMiddleware = void 0;
+exports.buisMiddleware = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const JWT_SECRET = process.env.buis_secret || "";
-const userMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const buisMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     if (!JWT_SECRET || JWT_SECRET.length < 2) {
         return res.status(400).json({ message: "jwt secret not found" });
     }
@@ -30,4 +30,4 @@ const userMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         res.status(401).json({ message: "Unauthorized User" });
     }
 });
-exports.userMiddleware = userMiddleware;
+exports.buisMiddleware = buisMiddleware;

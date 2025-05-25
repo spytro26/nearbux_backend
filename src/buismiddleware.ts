@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.buis_secret || "";
 
 
-export const userMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const buisMiddleware = async (req: Request, res: Response, next: NextFunction) => {
 
 if(!JWT_SECRET || JWT_SECRET.length<2){
     return res.status(400).json({message : "jwt secret not found"})

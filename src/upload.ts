@@ -31,7 +31,7 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
     }
 
     filePath = req.file.path;
-    const { productId, shopId } = req.body;
+    const { productId, shopId , adverId } = req.body;
 
     // Check if file actually exists on disk
     const fileExists = await fs.access(filePath).then(() => true).catch(() => false);
@@ -47,7 +47,7 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
 
     const imageUrl = result.secure_url;
     console.log(imageUrl) ;
-    console.log(productId, shopId)  ;
+    
 
     // hehe
     if (productId) {
@@ -63,6 +63,15 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
       await prisma.shop.update({
         where: { id : parseInt(shopId) },
         data: { image: imageUrl },
+      });
+    };
+    
+    if(adverId){
+      console.log("into the adverId");
+      await prisma.adver.update({
+        where : {id : parseInt(adverId)},
+        data : {image : imageUrl},
+
       });
     };
 

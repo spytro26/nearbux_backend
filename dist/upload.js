@@ -39,7 +39,7 @@ router.post('/upload-image', upload.single('image'), (req, res) => __awaiter(voi
             return res.status(400).json({ error: 'No file uploaded' });
         }
         filePath = req.file.path;
-        const { productId, shopId } = req.body;
+        const { productId, shopId, adverId } = req.body;
         // Check if file actually exists on disk
         const fileExists = yield promises_1.default.access(filePath).then(() => true).catch(() => false);
         if (!fileExists) {
@@ -52,7 +52,6 @@ router.post('/upload-image', upload.single('image'), (req, res) => __awaiter(voi
         });
         const imageUrl = result.secure_url;
         console.log(imageUrl);
-        console.log(productId, shopId);
         // hehe
         if (productId) {
             console.log("into the prodcutId");
@@ -66,6 +65,14 @@ router.post('/upload-image', upload.single('image'), (req, res) => __awaiter(voi
             console.log("into the shopId");
             yield index_1.prisma.shop.update({
                 where: { id: parseInt(shopId) },
+                data: { image: imageUrl },
+            });
+        }
+        ;
+        if (adverId) {
+            console.log("into the adverId");
+            yield index_1.prisma.adver.update({
+                where: { id: parseInt(adverId) },
                 data: { image: imageUrl },
             });
         }

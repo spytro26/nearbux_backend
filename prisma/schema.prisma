@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  
+  CANCELLED
+}
+
 model User {
   id             Int     @id @default(autoincrement())
   name           String
@@ -63,12 +71,13 @@ model Shop {
 
 model Order {
   id        Int @id @default(autoincrement())
-  soldById  Int
+  shopId  Int
   soldToId  Int
   productId Int
-
+  status      OrderStatus @default(PENDING) 
+  quantity Int 
   consumer User    @relation("UserOrders", fields: [soldToId], references: [id])
-  seller   Shop    @relation("ShopOrders", fields: [soldById], references: [id])
+  seller   Shop    @relation("ShopOrders", fields: [shopId], references: [id])
   product  Product @relation(fields: [productId], references: [id])
 
   createdAt DateTime @default(now())
@@ -93,8 +102,8 @@ model Product {
   name   String
   image  String?
   shopId Int
-  price  String
-
+  price  Int
+  quantity Int  
   shop      Shop    @relation(fields: [shopId], references: [id])
   orders    Order[]
   cartItems Cart[]
@@ -121,9 +130,12 @@ model Adver {
   title     String
   message   String
   shopId    Int
+  views Int @default(0)
+  clicks Int @default(0)
+   shopKeeperId Int?
   shop      Shop     @relation(fields: [shopId], references: [id])
   createdAt DateTime @default(now())
 
   ShopKeeper   ShopKeeper? @relation(fields: [shopKeeperId], references: [id])
-  shopKeeperId Int?
+ 
 }

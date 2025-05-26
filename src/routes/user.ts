@@ -5,7 +5,7 @@ app.use(express.json());
 import 'dotenv/config'
 import jwt from "jsonwebtoken";
 
- import {prisma} from '../api/index';
+ import {prisma} from '../index';
 import { boolean, promise, z } from "zod";
 
 import bcrypt from 'bcrypt';

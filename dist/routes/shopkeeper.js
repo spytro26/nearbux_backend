@@ -18,6 +18,7 @@ const app = (0, express_1.default)();
 app.use(express_1.default.json());
 require("dotenv/config");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const cron = require('node-cron');
 const index_1 = require("../index");
 const zod_1 = require("zod");
 const bcrypt_1 = __importDefault(require("bcrypt"));
@@ -133,9 +134,8 @@ exports.shopRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 
     if (!shopId) {
         return res.json({ message: "error while getting shopId" });
     }
-    console.log(shopId);
-    const token = jsonwebtoken_1.default.sign({ id: foundUser.id, ownerId: shopId === null || shopId === void 0 ? void 0 : shopId.id }, jwt_pass);
-    res.status(200).json({ token });
+    const token = jsonwebtoken_1.default.sign({ id: foundUser.id, shopId: shopId === null || shopId === void 0 ? void 0 : shopId.id }, jwt_pass);
+    res.status(200).json({ token, shopId: shopId.id, ownerId: foundUser.id });
 }));
 exports.shopRouter.post("/validate", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { username, phoneNumber } = req.body;
@@ -209,23 +209,40 @@ exports.shopRouter.post("/id", (req, res) => __awaiter(void 0, void 0, void 0, f
     return res.status(200).json({ message: keeper === null || keeper === void 0 ? void 0 : keeper.id });
 }));
 exports.shopRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { shopName, tagline, pin, localArea, coinValue, ownerId } = req.body;
+    const { shopName, tagline, pin, localArea, coinValue, ownerId, opens, closes } = req.body;
     try {
+        // Validate that opens and closes are provided
+        if (!opens || !closes) {
+            return res.status(400).json({ message: "Opening and closing times are required" });
+        }
+        // Convert string dates to Date objects if they're not already
+        const openingTime = new Date(opens);
+        const closingTime = new Date(closes);
+        // Validate that the dates are valid
+        if (isNaN(openingTime.getTime()) || isNaN(closingTime.getTime())) {
+            return res.status(400).json({ message: "Invalid date format for opening or closing time" });
+        }
+        // Validate that opening time is before closing time
+        if (openingTime >= closingTime) {
+            return res.status(400).json({ message: "Opening time must be before closing time" });
+        }
         const shop = yield index_1.prisma.shop.create({
             data: {
                 name: shopName,
                 tagline,
                 pin,
                 localArea,
-                value: coinValue,
+                coinValue: parseInt(coinValue), // Fixed: changed from 'value' to 'coinValue' to match schema
                 ownerId,
+                opens: openingTime,
+                closes: closingTime
             }
         });
-        return res.status(200).json({ message: "added succefully", id: shop.id });
+        return res.status(200).json({ message: "Added successfully", id: shop.id });
     }
     catch (e) {
         console.log(e);
-        res.status(400).json({ message: "error while adding info" });
+        res.status(400).json({ message: "Error while adding info" });
     }
 }));
 // Create promotion route
@@ -276,6 +293,9 @@ exports.shopRouter.post('/create-promotion', (req, res) => __awaiter(void 0, voi
 }));
 exports.shopRouter.get("/promotions/:shopId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const shopId = parseInt(req.params.shopId);
+    if (!shopId) {
+        return res.status(400).json({ message: "missing shopId" });
+    }
     if (isNaN(shopId)) {
         return res.status(400).json({ message: "Invalid Shop ID" });
     }
@@ -725,5 +745,274 @@ exports.shopRouter.delete('/products/:productId', (req, res) => __awaiter(void 0
         res.status(500).json({
             message: 'Failed to delete product'
         });
+    }
+}));
+exports.shopRouter.post('/products/bulk', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { products } = req.body;
+        // Validate input
+        if (!products || !Array.isArray(products) || products.length === 0) {
+            return res.status(400).json({
+                message: 'Products array is required and must contain at least one product'
+            });
+        }
+        // Validate each product
+        const validatedProducts = [];
+        const errors = [];
+        for (let i = 0; i < products.length; i++) {
+            const product = products[i];
+            // Check required fields
+            if (!product.name || !product.price || !product.quantity || !product.shopId) {
+                errors.push(`Product ${i + 1}: Missing required fields (name, price, quantity, shopId)`);
+                continue;
+            }
+            // Validate data types
+            if (typeof product.name !== 'string' || product.name.trim().length === 0) {
+                errors.push(`Product ${i + 1}: Name must be a non-empty string`);
+                continue;
+            }
+            if (isNaN(product.price) || product.price <= 0) {
+                errors.push(`Product ${i + 1}: Price must be a positive number`);
+                continue;
+            }
+            if (isNaN(product.quantity) || product.quantity < 0) {
+                errors.push(`Product ${i + 1}: Quantity must be a non-negative number`);
+                continue;
+            }
+            if (isNaN(product.shopId)) {
+                errors.push(`Product ${i + 1}: shopId must be a valid number`);
+                continue;
+            }
+            validatedProducts.push({
+                name: product.name.trim(),
+                price: parseInt(product.price),
+                quantity: parseInt(product.quantity),
+                shopId: parseInt(product.shopId),
+                canBePurchasedByCoin: product.canBePurchasedByCoin || false
+            });
+        }
+        // If there are validation errors, return them
+        if (errors.length > 0) {
+            return res.status(400).json({
+                message: 'Validation errors',
+                errors: errors
+            });
+        }
+        // Check if all shops exist - Fix: Explicitly type the shopIds array
+        const shopIds = [...new Set(validatedProducts.map((p) => p.shopId))];
+        const existingShops = yield index_1.prisma.shop.findMany({
+            where: {
+                id: {
+                    in: shopIds
+                }
+            },
+            select: {
+                id: true
+            }
+        });
+        const existingShopIds = existingShops.map(shop => shop.id);
+        const invalidShopIds = shopIds.filter(id => !existingShopIds.includes(id));
+        if (invalidShopIds.length > 0) {
+            return res.status(404).json({
+                message: 'Invalid shop IDs found',
+                invalidShopIds: invalidShopIds
+            });
+        }
+        // Check for duplicate product names within the same shop (case-insensitive)
+        const duplicateErrors = [];
+        // Check for duplicates within the current request
+        const productNamesByShop = new Map();
+        validatedProducts.forEach((product, index) => {
+            const shopId = product.shopId;
+            const productName = product.name.toLowerCase();
+            if (!productNamesByShop.has(shopId)) {
+                productNamesByShop.set(shopId, new Set());
+            }
+            const shopProducts = productNamesByShop.get(shopId);
+            if (shopProducts.has(productName)) {
+                duplicateErrors.push(`Product ${index + 1}: Duplicate product name '${product.name}' found in the same shop within this request`);
+            }
+            else {
+                shopProducts.add(productName);
+            }
+        });
+        // Check for existing products in the database with same names (case-insensitive)
+        const existingProducts = yield index_1.prisma.product.findMany({
+            where: {
+                shopId: {
+                    in: shopIds
+                }
+            },
+            select: {
+                name: true,
+                shopId: true
+            }
+        });
+        // Create a map of existing products by shop (case-insensitive)
+        const existingProductsByShop = new Map();
+        existingProducts.forEach(product => {
+            const shopId = product.shopId;
+            const productName = product.name.toLowerCase();
+            if (!existingProductsByShop.has(shopId)) {
+                existingProductsByShop.set(shopId, new Set());
+            }
+            existingProductsByShop.get(shopId).add(productName);
+        });
+        // Check if any new products conflict with existing ones
+        validatedProducts.forEach((product, index) => {
+            const shopId = product.shopId;
+            const productName = product.name.toLowerCase();
+            const existingShopProducts = existingProductsByShop.get(shopId);
+            if (existingShopProducts && existingShopProducts.has(productName)) {
+                duplicateErrors.push(`Product ${index + 1}: Product with name '${product.name}' already exists in this shop`);
+            }
+        });
+        if (duplicateErrors.length > 0) {
+            return res.status(409).json({
+                message: 'Duplicate product names found',
+                errors: duplicateErrors
+            });
+        }
+        // Create products using Prisma transaction for data consistency
+        const createdProducts = yield index_1.prisma.$transaction((prisma) => __awaiter(void 0, void 0, void 0, function* () {
+            const results = [];
+            for (const productData of validatedProducts) {
+                const newProduct = yield prisma.product.create({
+                    data: productData,
+                    include: {
+                        shop: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                });
+                results.push(newProduct);
+            }
+            return results;
+        }));
+        res.status(201).json({
+            message: `Successfully created ${createdProducts.length} products`,
+            products: createdProducts,
+            count: createdProducts.length
+        });
+    }
+    catch (error) {
+        console.error('Error bulk creating products:', error);
+        // Handle specific Prisma errors
+        if (error.code === 'P2002') {
+            return res.status(409).json({
+                message: 'Duplicate entry found',
+                error: error.message
+            });
+        }
+        if (error.code === 'P2003') {
+            return res.status(400).json({
+                message: 'Foreign key constraint failed',
+                error: error.message
+            });
+        }
+        res.status(500).json({
+            message: 'Internal server error while creating products',
+            error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        });
+    }
+}));
+exports.shopRouter.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.id);
+        const shop = yield index_1.prisma.shop.findUnique({
+            where: { id: shopId },
+            include: {
+                owner: {
+                    select: {
+                        name: true,
+                        phone: true
+                    }
+                }
+            }
+        });
+        if (!shop) {
+            return res.status(404).json({ error: 'Shop not found' });
+        }
+        return res.json(shop);
+    }
+    catch (error) {
+        console.error('Error fetching shop:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}));
+// PUT /shop/:id - Update shop information
+exports.shopRouter.put('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.id);
+        const { name, tagline, pin, localArea, coinValue, opens, closes } = req.body;
+        const updatedShop = yield index_1.prisma.shop.update({
+            where: { id: shopId },
+            data: {
+                name,
+                tagline,
+                pin,
+                localArea,
+                coinValue,
+                opens: opens ? new Date(opens) : null,
+                closes: closes ? new Date(closes) : null
+            },
+            include: {
+                owner: {
+                    select: {
+                        name: true,
+                        phone: true
+                    }
+                }
+            }
+        });
+        return res.json(updatedShop);
+    }
+    catch (error) {
+        console.error('Error updating shop:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}));
+// Cron job to reactivate all shops daily (run at midnight)
+cron.schedule('0 0 * * *', () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        yield index_1.prisma.shop.updateMany({
+            where: { isActive: false },
+            data: { isActive: true }
+        });
+        console.log('All shops reactivated for the new day');
+    }
+    catch (error) {
+        console.error('Error reactivating shops:', error);
+    }
+}));
+// PATCH /shop/:id/toggle-status
+exports.shopRouter.patch('/:id/toggle-status', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.id);
+        // Get current shop status  
+        const currentShop = yield index_1.prisma.shop.findUnique({
+            where: { id: shopId }
+        });
+        if (!currentShop) {
+            return res.status(404).json({ error: 'Shop not found' });
+        }
+        // Toggle the isActive status
+        const updatedShop = yield index_1.prisma.shop.update({
+            where: { id: shopId },
+            data: {
+                isActive: !currentShop.isActive
+            },
+            include: {
+                owner: true
+            }
+        });
+        res.json(updatedShop);
+    }
+    catch (error) {
+        console.error('Error toggling shop status:', error);
+        res.status(500).json({ error: 'Failed to toggle shop status' });
     }
 }));

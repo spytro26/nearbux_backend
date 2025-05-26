@@ -50,12 +50,15 @@ model ShopKeeper {
 model Shop {
   id        Int     @id @default(autoincrement())
   name String
+  isActive Boolean @default(true)
   rating    Int @default(0)
-  tagline   String
+  opens  DateTime?
+  closes DateTime?
+  tagline   String  
   image     String?
   pin       String
   localArea String
-  value     String
+  coinValue     Int
 
   ownerId Int  
   owner   ShopKeeper @relation(fields: [ownerId], references: [id])
@@ -107,6 +110,9 @@ model Product {
   shop      Shop    @relation(fields: [shopId], references: [id])
   orders    Order[]
   cartItems Cart[]
+
+  // allow by coin 
+  canBePurchasedByCoin Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

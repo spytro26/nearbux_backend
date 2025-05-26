@@ -14,7 +14,11 @@ app.use(express.json());
 
 app.use("/user", userRouter);
 app.use("/shop", shopRouter);
-app.use("/api", router)
+app.use("/api", router);
+app.get("/", (req, res)=>{
+    res.json({ active : "active"});
+    
+})
 
 
 const port = process.env.port;

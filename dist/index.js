@@ -18,6 +18,9 @@ app.use(express_1.default.json());
 app.use("/user", user_1.userRouter);
 app.use("/shop", shopkeeper_1.shopRouter);
 app.use("/api", upload_1.default);
+app.get("/", (req, res) => {
+    res.json({ active: "active" });
+});
 const port = process.env.port;
 console.log("service running on port " + port);
 app.listen(3000);

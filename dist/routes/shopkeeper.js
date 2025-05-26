@@ -1016,3 +1016,335 @@ exports.shopRouter.patch('/:id/toggle-status', (req, res) => __awaiter(void 0, v
         res.status(500).json({ error: 'Failed to toggle shop status' });
     }
 }));
+// GET /shop/:shopId/products - Fetch all products for a specific shop
+exports.shopRouter.get('/:shopId/products', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.shopId);
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: 'Invalid shop ID' });
+        }
+        const products = yield index_1.prisma.product.findMany({
+            where: {
+                shopId: shopId
+            },
+            select: {
+                id: true,
+                name: true,
+                image: true,
+                price: true,
+                quantity: true,
+                canBePurchasedByCoin: true,
+                createdAt: true,
+                updatedAt: true
+            },
+            orderBy: {
+                name: 'asc'
+            }
+        });
+        return res.status(200).json(products);
+    }
+    catch (error) {
+        console.error('Error fetching products:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}));
+// POST /shop/:shopId/update-inventory - Update product quantities after billing
+exports.shopRouter.post('/:shopId/update-inventory', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.shopId);
+        const { items, ownerId } = req.body;
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: 'Invalid shop ID' });
+        }
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Items array is required' });
+        }
+        if (!ownerId) {
+            return res.status(400).json({ error: 'Owner ID is required' });
+        }
+        // Verify shop ownership
+        const shop = yield index_1.prisma.shop.findFirst({
+            where: {
+                id: shopId,
+                ownerId: parseInt(ownerId)
+            }
+        });
+        if (!shop) {
+            return res.status(403).json({ error: 'Unauthorized: Shop not found or access denied' });
+        }
+        // Start transaction to update all products and create orders
+        const updatePromises = items.map((item) => __awaiter(void 0, void 0, void 0, function* () {
+            const productId = parseInt(item.productId);
+            const quantityToReduce = parseInt(item.quantity);
+            if (isNaN(productId) || isNaN(quantityToReduce) || quantityToReduce <= 0) {
+                throw new Error(`Invalid product ID or quantity for item: ${JSON.stringify(item)}`);
+            }
+            // Get current product to check availability
+            const currentProduct = yield index_1.prisma.product.findFirst({
+                where: {
+                    id: productId,
+                    shopId: shopId
+                }
+            });
+            if (!currentProduct) {
+                throw new Error(`Product with ID ${productId} not found in shop ${shopId}`);
+            }
+            if (currentProduct.quantity < quantityToReduce) {
+                throw new Error(`Insufficient quantity for product ${currentProduct.name}. Available: ${currentProduct.quantity}, Required: ${quantityToReduce}`);
+            }
+            // Update product quantity
+            const updatedProduct = yield index_1.prisma.product.update({
+                where: {
+                    id: productId
+                },
+                data: {
+                    quantity: currentProduct.quantity - quantityToReduce
+                }
+            });
+            // Create order record for offline sale
+            yield index_1.prisma.order.create({
+                data: {
+                    shopId: shopId,
+                    productId: productId,
+                    quantity: quantityToReduce,
+                    soldOffline: true,
+                    status: 'COMPLETED',
+                    soldToId: null // null since it's an offline sale without user account
+                }
+            });
+            return updatedProduct;
+        }));
+        // Execute all updates
+        const updatedProducts = yield Promise.all(updatePromises);
+        return res.status(200).json({
+            message: 'Inventory updated successfully and orders created',
+            updatedProducts: updatedProducts.map(product => ({
+                id: product.id,
+                name: product.name,
+                newQuantity: product.quantity
+            }))
+        });
+    }
+    catch (error) {
+        console.error('Error updating inventory:', error);
+        return res.status(500).json({
+            error: 'Failed to update inventory',
+            // @ts-ignore
+            details: error.message
+        });
+    }
+}));
+// GET /shop/:shopId - Get shop details
+exports.shopRouter.get('/:shopId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.shopId);
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: 'Invalid shop ID' });
+        }
+        const shop = yield index_1.prisma.shop.findUnique({
+            where: {
+                id: shopId
+            },
+            select: {
+                id: true,
+                name: true,
+                isActive: true,
+                rating: true,
+                opens: true,
+                closes: true,
+                tagline: true,
+                image: true,
+                pin: true,
+                localArea: true,
+                coinValue: true,
+                ownerId: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+        if (!shop) {
+            return res.status(404).json({ error: 'Shop not found' });
+        }
+        return res.status(200).json(shop);
+    }
+    catch (error) {
+        console.error('Error fetching shop details:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}));
+// POST /shop/:shopId/products - Add new product to shop
+exports.shopRouter.post('/:shopId/products', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.shopId);
+        const { name, image, price, quantity, canBePurchasedByCoin, ownerId } = req.body;
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: 'Invalid shop ID' });
+        }
+        if (!name || !price || !quantity) {
+            return res.status(400).json({ error: 'Name, price, and quantity are required' });
+        }
+        if (!ownerId) {
+            return res.status(400).json({ error: 'Owner ID is required' });
+        }
+        // Verify shop ownership
+        const shop = yield index_1.prisma.shop.findFirst({
+            where: {
+                id: shopId,
+                ownerId: parseInt(ownerId)
+            }
+        });
+        if (!shop) {
+            return res.status(403).json({ error: 'Unauthorized: Shop not found or access denied' });
+        }
+        const newProduct = yield index_1.prisma.product.create({
+            data: {
+                name: name,
+                image: image,
+                shopId: shopId,
+                price: parseInt(price),
+                quantity: parseInt(quantity),
+                canBePurchasedByCoin: canBePurchasedByCoin || false
+            }
+        });
+        return res.status(201).json(newProduct);
+    }
+    catch (error) {
+        console.error('Error creating product:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}));
+// PUT /shop/:shopId/products/:productId - Update product
+exports.shopRouter.put('/:shopId/products/:productId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.shopId);
+        const productId = parseInt(req.params.productId);
+        const { name, image, price, quantity, canBePurchasedByCoin, ownerId } = req.body;
+        if (isNaN(shopId) || isNaN(productId)) {
+            return res.status(400).json({ error: 'Invalid shop ID or product ID' });
+        }
+        if (!ownerId) {
+            return res.status(400).json({ error: 'Owner ID is required' });
+        }
+        // Verify shop ownership
+        const shop = yield index_1.prisma.shop.findFirst({
+            where: {
+                id: shopId,
+                ownerId: parseInt(ownerId)
+            }
+        });
+        if (!shop) {
+            return res.status(403).json({ error: 'Unauthorized: Shop not found or access denied' });
+        }
+        // Verify product belongs to shop
+        const existingProduct = yield index_1.prisma.product.findFirst({
+            where: {
+                id: productId,
+                shopId: shopId
+            }
+        });
+        if (!existingProduct) {
+            return res.status(404).json({ error: 'Product not found in this shop' });
+        }
+        const updatedProduct = yield index_1.prisma.product.update({
+            where: {
+                id: productId
+            },
+            data: {
+                name: name || existingProduct.name,
+                image: image !== undefined ? image : existingProduct.image,
+                price: price !== undefined ? parseInt(price) : existingProduct.price,
+                quantity: quantity !== undefined ? parseInt(quantity) : existingProduct.quantity,
+                canBePurchasedByCoin: canBePurchasedByCoin !== undefined ? canBePurchasedByCoin : existingProduct.canBePurchasedByCoin
+            }
+        });
+        return res.status(200).json(updatedProduct);
+    }
+    catch (error) {
+        console.error('Error updating product:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}));
+// DELETE /shop/:shopId/products/:productId - Delete product
+exports.shopRouter.delete('/:shopId/products/:productId', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.shopId);
+        const productId = parseInt(req.params.productId);
+        const { ownerId } = req.body;
+        if (isNaN(shopId) || isNaN(productId)) {
+            return res.status(400).json({ error: 'Invalid shop ID or product ID' });
+        }
+        if (!ownerId) {
+            return res.status(400).json({ error: 'Owner ID is required' });
+        }
+        // Verify shop ownership
+        const shop = yield index_1.prisma.shop.findFirst({
+            where: {
+                id: shopId,
+                ownerId: parseInt(ownerId)
+            }
+        });
+        if (!shop) {
+            return res.status(403).json({ error: 'Unauthorized: Shop not found or access denied' });
+        }
+        // Verify product belongs to shop
+        const existingProduct = yield index_1.prisma.product.findFirst({
+            where: {
+                id: productId,
+                shopId: shopId
+            }
+        });
+        if (!existingProduct) {
+            return res.status(404).json({ error: 'Product not found in this shop' });
+        }
+        yield index_1.prisma.product.delete({
+            where: {
+                id: productId
+            }
+        });
+        return res.status(200).json({ message: 'Product deleted successfully' });
+    }
+    catch (error) {
+        console.error('Error deleting product:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}));
+// GET /shop/:shopId/orders - Get all orders for a shop
+exports.shopRouter.get('/:shopId/orders', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const shopId = parseInt(req.params.shopId);
+        if (isNaN(shopId)) {
+            return res.status(400).json({ error: 'Invalid shop ID' });
+        }
+        const orders = yield index_1.prisma.order.findMany({
+            where: {
+                shopId: shopId
+            },
+            include: {
+                consumer: {
+                    select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                        phone: true
+                    }
+                },
+                product: {
+                    select: {
+                        id: true,
+                        name: true,
+                        price: true,
+                        image: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        return res.status(200).json(orders);
+    }
+    catch (error) {
+        console.error('Error fetching orders:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}));

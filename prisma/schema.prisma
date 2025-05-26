@@ -71,15 +71,16 @@ model Shop {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
+ 
 model Order {
   id        Int @id @default(autoincrement())
   shopId  Int
-  soldToId  Int
+  soldToId  Int?
+  soldOffline Boolean @default(false)
   productId Int
   status      OrderStatus @default(PENDING) 
   quantity Int 
-  consumer User    @relation("UserOrders", fields: [soldToId], references: [id])
+  consumer User?    @relation("UserOrders", fields: [soldToId], references: [id])
   seller   Shop    @relation("ShopOrders", fields: [shopId], references: [id])
   product  Product @relation(fields: [productId], references: [id])
 

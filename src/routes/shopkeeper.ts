@@ -5,7 +5,7 @@ app.use(express.json());
 import 'dotenv/config'
 import jwt from "jsonwebtoken";
 const cron = require('node-cron');
- import {prisma} from '../index';
+ import {prisma} from '../api/index';
 import { boolean, promise, z } from "zod";
 
 import bcrypt from 'bcrypt';

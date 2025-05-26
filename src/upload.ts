@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
-import { prisma } from './index';
+import { prisma } from './api/index';
 import dotenv from 'dotenv';
 import fs from 'fs/promises'; // Use promise-based fs
 

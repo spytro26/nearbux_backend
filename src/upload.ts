@@ -10,8 +10,8 @@ dotenv.config();
 const router = express.Router();
 
 // Multer config with 5MB limit
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({
+  dest: 'uploads/',
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 

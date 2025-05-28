@@ -24,7 +24,7 @@ model User {
   pin            String?
   localArea      String?
   coinsAvailable Int?    @default(0)
-
+  
   orders        Order[] @relation("UserOrders")
   coinsReceived Coin[]  @relation("ToUser")
   cartItems     Cart[]
@@ -39,7 +39,7 @@ model ShopKeeper {
   name     String
   username String @unique
   password String
-
+  //  false for english and true for hindi 
   shops Shop[]
   adver Adver[]
 
@@ -145,4 +145,18 @@ model Adver {
 
   ShopKeeper   ShopKeeper? @relation(fields: [shopKeeperId], references: [id])
  
+}
+
+model Feedback {
+  id Int @id @default(autoincrement())
+  ownerId  Int ? 
+  userId Int ? 
+  title String
+  description String
+  feedbackType String
+  time  String
+  isSolved Boolean @default(false)
+  
+
+
 }

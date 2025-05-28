@@ -1598,3 +1598,35 @@ shopRouter.get('/:shopId/orders', async (req : any , res : any ) : Promise <any>
 
 
 
+shopRouter.post("/feedback", async (req, res): Promise<any> => {
+  const {ownerId,
+    feedbackType,
+     
+    title,
+    description,
+    timestamp} = req.body; 
+    if(  !feedbackType || !title || !description || !timestamp ){
+      return res.json({message : 'informatin missing'});
+
+    }
+     
+    try {
+       const response =  await  prisma.feedback.create({
+        data : {
+          ownerId ,
+          feedbackType,
+          title,
+          description ,
+          time : timestamp
+
+        }
+       });
+       res.status(200).json({message : "got it "})
+    }catch(e){
+      return res.json({error : e});
+
+    }
+
+
+})
+

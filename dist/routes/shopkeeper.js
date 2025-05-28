@@ -1348,3 +1348,24 @@ exports.shopRouter.get('/:shopId/orders', (req, res) => __awaiter(void 0, void 0
         return res.status(500).json({ error: 'Internal server error' });
     }
 }));
+exports.shopRouter.post("/feedback", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { ownerId, feedbackType, title, description, timestamp } = req.body;
+    if (!ownerId || !feedbackType || !title || !description || !timestamp) {
+        return res.json({ message: 'informatin missing' });
+    }
+    try {
+        const response = yield index_1.prisma.feedback.create({
+            data: {
+                ownerId,
+                feedbackType,
+                title,
+                description,
+                time: timestamp
+            }
+        });
+        res.status(200).json({ message: "got it " });
+    }
+    catch (e) {
+        return res.json({ error: e });
+    }
+}));

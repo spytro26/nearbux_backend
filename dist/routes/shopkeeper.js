@@ -1350,7 +1350,7 @@ exports.shopRouter.get('/:shopId/orders', (req, res) => __awaiter(void 0, void 0
 }));
 exports.shopRouter.post("/feedback", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { ownerId, feedbackType, title, description, timestamp } = req.body;
-    if (!ownerId || !feedbackType || !title || !description || !timestamp) {
+    if (!feedbackType || !title || !description || !timestamp) {
         return res.json({ message: 'informatin missing' });
     }
     try {

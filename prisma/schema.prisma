@@ -7,156 +7,135 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  COMPLETED
-  
-  CANCELLED
-}
-
 model User {
-  id             Int     @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   name           String
-  username       String  @unique
-  phone          String  @unique
+  username       String   @unique
+  phone          String   @unique
   password       String
   pin            String?
   localArea      String?
-  coinsAvailable Int?    @default(0)
-  
-  orders        Order[] @relation("UserOrders")
-  coinsReceived Coin[]  @relation("ToUser")
-  cartItems     Cart[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  coinsAvailable Int?     @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  cartItems      Cart[]
+  coinsReceived  Coin[]   @relation("ToUser")
+  orders         Order[]  @relation("UserOrders")
 }
 
 model ShopKeeper {
-  id       Int    @id @default(autoincrement())
-  phone    String @unique
-  name     String
-  username String @unique
-  password String
-  //  false for english and true for hindi 
-  shops Shop[]
-  adver Adver[]
-
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  name      String
+  username  String   @unique
+  password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  adver     Adver[]
+  shops     Shop[]
 }
 
 model Shop {
-  id        Int     @id @default(autoincrement())
-  name String
-  isActive Boolean @default(true)
-  rating    Int @default(0)
-  opens  DateTime?
-  closes DateTime?
-  tagline   String  
+  id        Int        @id @default(autoincrement())
+  tagline   String
   image     String?
   pin       String
   localArea String
-  coinValue     Int
-
-  ownerId Int  
-  owner   ShopKeeper @relation(fields: [ownerId], references: [id])
-
-  orders    Order[]   @relation("ShopOrders")
-  products  Product[]
-  coinsSent Coin[]    @relation("FromShop")
+  ownerId   Int
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  name      String
+  rating    Int        @default(0)
+  closes    DateTime?
+  coinValue Int
+  opens     DateTime?
+  isActive  Boolean    @default(true)
   adver     Adver[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  coinsSent Coin[]     @relation("FromShop")
+  orders    Order[]    @relation("ShopOrders")
+  products  Product[]
+  owner     ShopKeeper @relation(fields: [ownerId], references: [id])
 }
- 
-model Order {
-  id        Int @id @default(autoincrement())
-  shopId  Int
-  soldToId  Int?
-  soldOffline Boolean @default(false)
-  productId Int
-  status      OrderStatus @default(PENDING) 
-  quantity Int 
-  consumer User?    @relation("UserOrders", fields: [soldToId], references: [id])
-  seller   Shop    @relation("ShopOrders", fields: [shopId], references: [id])
-  product  Product @relation(fields: [productId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Order {
+  id          Int         @id @default(autoincrement())
+  soldToId    Int?
+  productId   Int
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  quantity    Int
+  shopId      Int
+  status      OrderStatus @default(PENDING)
+  soldOffline Boolean     @default(false)
+  product     Product     @relation(fields: [productId], references: [id])
+  seller      Shop        @relation("ShopOrders", fields: [shopId], references: [id])
+  consumer    User?       @relation("UserOrders", fields: [soldToId], references: [id])
 }
 
 model Coin {
-  id        Int    @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   transFrom Int
   transTo   Int
   volume    String
-
-  fromShop Shop @relation("FromShop", fields: [transFrom], references: [id])
-  toUser   User @relation("ToUser", fields: [transTo], references: [id])
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  fromShop  Shop     @relation("FromShop", fields: [transFrom], references: [id])
+  toUser    User     @relation("ToUser", fields: [transTo], references: [id])
 }
 
 model Product {
-  id     Int     @id @default(autoincrement())
-  name   String
-  image  String?
-  shopId Int
-  price  Int
-  quantity Int  
-  shop      Shop    @relation(fields: [shopId], references: [id])
-  orders    Order[]
-  cartItems Cart[]
-
-  // allow by coin 
-  canBePurchasedByCoin Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  image                String?
+  shopId               Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  quantity             Int
+  price                Int
+  canBePurchasedByCoin Boolean  @default(false)
+  cartItems            Cart[]
+  orders               Order[]
+  shop                 Shop     @relation(fields: [shopId], references: [id])
 }
 
 model Cart {
-  id        Int @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   productId Int
   userId    Int
-
-  product Product @relation(fields: [productId], references: [id])
-  user    User    @relation(fields: [userId], references: [id])
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Adver {
-  id        Int      @id @default(autoincrement())
-  image     String?
-  title     String
-  message   String
-  shopId    Int
-  views Int @default(0)
-  clicks Int @default(0)
-   shopKeeperId Int?
-  shop      Shop     @relation(fields: [shopId], references: [id])
-  createdAt DateTime @default(now())
-
+  id           Int         @id @default(autoincrement())
+  image        String?
+  title        String
+  message      String
+  shopId       Int
+  createdAt    DateTime    @default(now())
+  shopKeeperId Int?
+  clicks       Int         @default(0)
+  views        Int         @default(0)
+  shop         Shop        @relation(fields: [shopId], references: [id])
   ShopKeeper   ShopKeeper? @relation(fields: [shopKeeperId], references: [id])
- 
 }
 
 model Feedback {
-  id Int @id @default(autoincrement())
-  ownerId  Int ? 
-  userId Int ? 
-  title String
-  description String
+  id           Int     @id @default(autoincrement())
+  ownerId      Int?
+  userId       Int?
+  title        String
+  description  String
   feedbackType String
-  time  String
-  isSolved Boolean @default(false)
-  
+  time         String
+  isSolved     Boolean @default(false)
+}
 
-
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
 }

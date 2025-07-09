@@ -1,21 +1,14 @@
-
 import express from 'express';
-const app = express();
-app.use(express.json());
 import 'dotenv/config'
 import jwt from "jsonwebtoken";
-const cron = require('node-cron');
- import {prisma} from '../index';
+import {prisma} from '../index';
 import { boolean, promise, z } from "zod";
-
 import bcrypt from 'bcrypt';
 import { TypePredicateKind } from 'typescript';
-
-
- export const shopRouter =  express.Router();
-
-
-
+const app = express();
+const cron = require('node-cron');
+app.use(express.json());
+export const shopRouter =  express.Router();
  shopRouter.post("/signup", async (req , res) : Promise <any>  =>{
     
      const {name , username , password , phoneNumber} = req.body;
@@ -451,7 +444,7 @@ shopRouter.post("/already", async (req, res) : Promise<any> =>{
       return res.status(200).json({message : 1})
     }
     else {
-      return res.status(400).json({message : 0});
+      return res.status(200).json({message : 0});
   
     }
 
@@ -1628,5 +1621,67 @@ shopRouter.post("/feedback", async (req, res): Promise<any> => {
     }
 
 
-})
+});
 
+  shopRouter.post("/shopname", async(req, res) : Promise <any> =>{
+    const {shopId} = req.body;
+
+    try {
+      const shopName = await prisma.shop.findFirst({
+        where : {
+          id : parseInt(shopId)
+        },
+        select : {
+          name : true,
+          tagline : true,
+        }
+      });
+
+      return res.status(201).json({message : shopName?.name, tagline :shopName?.tagline})
+    
+    
+
+    }catch(e: any){
+      console.error(e.message);
+      return res.status(502).json({message : "error occured while getting the shopName"}) ;
+    };
+
+
+  } )
+
+
+
+
+  shopRouter.post("/own/already", async (req, res) : Promise<any> =>{
+    const {storedownerIds} = req.body;
+    let ankush = 0;
+    console.log("hitted") ;
+
+    try {
+      const ispresent = await prisma.shopKeeper.findFirst({
+
+      where : {
+        id : storedownerIds
+      }
+    });
+    
+    if(ispresent){
+      ankush = 1; 
+    }
+
+
+
+    }catch(e){
+       console.error(e);
+      return res.status(500).json({error : "error while checking db "});
+     
+      
+
+
+    }
+    
+    return res.status(200).json({message : ankush, islive : "yes"});
+
+
+
+  })

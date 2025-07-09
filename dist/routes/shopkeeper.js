@@ -14,14 +14,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.shopRouter = void 0;
 const express_1 = __importDefault(require("express"));
-const app = (0, express_1.default)();
-app.use(express_1.default.json());
 require("dotenv/config");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const cron = require('node-cron');
 const index_1 = require("../index");
 const zod_1 = require("zod");
 const bcrypt_1 = __importDefault(require("bcrypt"));
+const app = (0, express_1.default)();
+const cron = require('node-cron');
+app.use(express_1.default.json());
 exports.shopRouter = express_1.default.Router();
 exports.shopRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, username, password, phoneNumber } = req.body;
@@ -369,7 +369,7 @@ exports.shopRouter.post("/already", (req, res) => __awaiter(void 0, void 0, void
             return res.status(200).json({ message: 1 });
         }
         else {
-            return res.status(400).json({ message: 0 });
+            return res.status(200).json({ message: 0 });
         }
     }
     catch (e) {
@@ -1368,4 +1368,44 @@ exports.shopRouter.post("/feedback", (req, res) => __awaiter(void 0, void 0, voi
     catch (e) {
         return res.json({ error: e });
     }
+}));
+exports.shopRouter.post("/shopname", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shopId } = req.body;
+    try {
+        const shopName = yield index_1.prisma.shop.findFirst({
+            where: {
+                id: parseInt(shopId)
+            },
+            select: {
+                name: true,
+                tagline: true,
+            }
+        });
+        return res.status(201).json({ message: shopName === null || shopName === void 0 ? void 0 : shopName.name, tagline: shopName === null || shopName === void 0 ? void 0 : shopName.tagline });
+    }
+    catch (e) {
+        console.error(e.message);
+        return res.status(502).json({ message: "error occured while getting the shopName" });
+    }
+    ;
+}));
+exports.shopRouter.post("/own/already", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { storedownerIds } = req.body;
+    let ankush = 0;
+    console.log("hitted");
+    try {
+        const ispresent = yield index_1.prisma.shopKeeper.findFirst({
+            where: {
+                id: storedownerIds
+            }
+        });
+        if (ispresent) {
+            ankush = 1;
+        }
+    }
+    catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "error while checking db " });
+    }
+    return res.status(200).json({ message: ankush, islive: "yes" });
 }));

@@ -1685,3 +1685,45 @@ shopRouter.post("/feedback", async (req, res): Promise<any> => {
 
 
   })
+
+
+  shopRouter.post("/isverified", async  (req, res ) : Promise<any> =>{
+    const {ownerId} = req.body;
+    
+     let x = false;
+
+    let a; 
+    try {
+
+        a = await prisma.shopKeeper.findFirst({
+      where : {
+        id : parseInt(ownerId)  
+      }, 
+      select: {
+        verified: true
+      }
+    });
+    }catch(e){
+      console.error(e);
+      return res.status(404).json({message :"error "});
+
+
+    }
+
+    if(a){
+      x = a.verified;
+
+    }else{
+      return res.status(200).json({message : "user not found in the db"});
+
+    }
+    
+    return res.status(200).json({message : x});
+
+    
+   
+
+
+  })
+
+  

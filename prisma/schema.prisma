@@ -27,6 +27,7 @@ model ShopKeeper {
   id        Int      @id @default(autoincrement())
   phone     String   @unique
   name      String
+  verified  Boolean  @default(false)
   username  String   @unique
   password  String
   createdAt DateTime @default(now())
@@ -54,7 +55,7 @@ model Shop {
   coinsSent Coin[]     @relation("FromShop")
   orders    Order[]    @relation("ShopOrders")
   products  Product[]
-  owner     ShopKeeper @relation(fields: [ownerId], references: [id])
+  owner     ShopKeeper @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 }
 
 model Order {
@@ -67,9 +68,9 @@ model Order {
   shopId      Int
   status      OrderStatus @default(PENDING)
   soldOffline Boolean     @default(false)
-  product     Product     @relation(fields: [productId], references: [id])
-  seller      Shop        @relation("ShopOrders", fields: [shopId], references: [id])
-  consumer    User?       @relation("UserOrders", fields: [soldToId], references: [id])
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  seller      Shop        @relation("ShopOrders", fields: [shopId], references: [id], onDelete: Cascade)
+  consumer    User?       @relation("UserOrders", fields: [soldToId], references: [id], onDelete: SetNull)
 }
 
 model Coin {
@@ -79,8 +80,8 @@ model Coin {
   volume    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  fromShop  Shop     @relation("FromShop", fields: [transFrom], references: [id])
-  toUser    User     @relation("ToUser", fields: [transTo], references: [id])
+  fromShop  Shop     @relation("FromShop", fields: [transFrom], references: [id], onDelete: Cascade)
+  toUser    User     @relation("ToUser", fields: [transTo], references: [id], onDelete: Cascade)
 }
 
 model Product {
@@ -95,7 +96,7 @@ model Product {
   canBePurchasedByCoin Boolean  @default(false)
   cartItems            Cart[]
   orders               Order[]
-  shop                 Shop     @relation(fields: [shopId], references: [id])
+  shop                 Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }
 
 model Cart {
@@ -104,8 +105,8 @@ model Cart {
   userId    Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  product   Product  @relation(fields: [productId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Adver {
@@ -118,8 +119,8 @@ model Adver {
   shopKeeperId Int?
   clicks       Int         @default(0)
   views        Int         @default(0)
-  shop         Shop        @relation(fields: [shopId], references: [id])
-  ShopKeeper   ShopKeeper? @relation(fields: [shopKeeperId], references: [id])
+  shop         Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  ShopKeeper   ShopKeeper? @relation(fields: [shopKeeperId], references: [id], onDelete: SetNull)
 }
 
 model Feedback {

@@ -1409,3 +1409,29 @@ exports.shopRouter.post("/own/already", (req, res) => __awaiter(void 0, void 0, 
     }
     return res.status(200).json({ message: ankush, islive: "yes" });
 }));
+exports.shopRouter.post("/isverified", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { ownerId } = req.body;
+    let x = false;
+    let a;
+    try {
+        a = yield index_1.prisma.shopKeeper.findFirst({
+            where: {
+                id: parseInt(ownerId)
+            },
+            select: {
+                verified: true
+            }
+        });
+    }
+    catch (e) {
+        console.error(e);
+        return res.status(404).json({ message: "error " });
+    }
+    if (a) {
+        x = a.verified;
+    }
+    else {
+        return res.status(200).json({ message: "user not found in the db" });
+    }
+    return res.status(200).json({ message: x });
+}));

@@ -55,6 +55,7 @@ model Shop {
   coinsSent Coin[]     @relation("FromShop")
   orders    Order[]    @relation("ShopOrders")
   products  Product[]
+  offer Offer[] 
   owner     ShopKeeper @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 }
 
@@ -96,6 +97,7 @@ model Product {
   canBePurchasedByCoin Boolean  @default(false)
   cartItems            Cart[]
   orders               Order[]
+  offers               Offer[]
   shop                 Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 }
 
@@ -134,9 +136,30 @@ model Feedback {
   isSolved     Boolean @default(false)
 }
 
+model Offer {
+  id Int @id @default(autoincrement())
+  type OfferType
+  title String?
+  description String?
+  minimum_amount Int?
+  product Int?
+  percentage Int?
+  fixed Int?
+  shop Int 
+  shops Shop @relation(fields: [shop], references: [id] , onDelete: Cascade)
+  products Product? @relation(fields: [product], references: [id] , onDelete: Cascade)
+  
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED
   CANCELLED
   COMPLETED
+}
+enum OfferType {
+  product 
+  money 
+  percentage 
+
 }

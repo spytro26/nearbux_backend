@@ -1727,3 +1727,68 @@ shopRouter.post("/feedback", async (req, res): Promise<any> => {
   })
 
   
+  enum OfferType {
+  product ,
+  money ,
+  percentage 
+
+}
+
+  shopRouter.post("/createoffer", async (req, res) : Promise <any> =>{
+    const {type  ,fixed, title , product, percentage,  description , minimum_amount, shopKeeper   } = req.body;
+    try {
+       await prisma.offer.create({
+      data  : {
+        type , 
+        title , 
+        description,
+        minimum_amount,
+        shop : shopKeeper,
+        product,
+        percentage,
+        fixed
+        
+        
+      }
+    })
+
+    }catch(e){
+      console.log(e);
+      return res.status(500).json({message : "error while creating the offer "});
+
+    }
+    return res.status(200).json({message : "created succefully"});
+   
+    // for commmit 
+    
+  });
+
+
+  shopRouter.post("/getoffer", async (req, res) : Promise <any> =>{
+    const {shopId } = req.body;
+    if(!shopId){
+      return res.json({message : "shopId not found"});
+
+    }
+
+    try {
+      const offers = await prisma.offer.findMany({
+        where : {
+          shop : shopId
+
+        }
+        
+
+      });
+
+      return res.status(200).json({message : offers});
+
+    } catch (e){
+      console.log(e);
+      return res.status(500).json({message : "error while fetching the offers"})  ;
+      
+    }
+
+
+
+  })

@@ -144,6 +144,7 @@ model Offer {
   minimum_amount Int?
   product Int?
   percentage Int?
+  coinValue Int?
   fixed Int?
   shop Int 
   shops Shop @relation(fields: [shop], references: [id] , onDelete: Cascade)

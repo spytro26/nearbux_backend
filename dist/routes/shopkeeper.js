@@ -1435,3 +1435,179 @@ exports.shopRouter.post("/isverified", (req, res) => __awaiter(void 0, void 0, v
     }
     return res.status(200).json({ message: x });
 }));
+var OfferType;
+(function (OfferType) {
+    OfferType[OfferType["product"] = 0] = "product";
+    OfferType[OfferType["money"] = 1] = "money";
+    OfferType[OfferType["percentage"] = 2] = "percentage";
+})(OfferType || (OfferType = {}));
+// GET route to fetch offers for a specific shop (updated to include product details)
+exports.shopRouter.get("/:shopId/offers", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shopId } = req.params;
+    if (!shopId) {
+        return res.status(400).json({ message: "shopId not found" });
+    }
+    try {
+        const offers = yield index_1.prisma.offer.findMany({
+            where: {
+                shop: parseInt(shopId)
+            },
+            include: {
+                products: {
+                    select: {
+                        id: true,
+                        name: true,
+                        price: true,
+                        image: true
+                    }
+                }
+            }
+        });
+        return res.status(200).json(offers);
+    }
+    catch (e) {
+        console.log(e);
+        return res.status(500).json({ message: "error while fetching the offers" });
+    }
+}));
+// POST route to create offer (matches frontend expectation)
+exports.shopRouter.post("/:shopId/offers", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shopId } = req.params;
+    const { type, fixed, title, product, percentage, description, minimum_amount, coinValue } = req.body;
+    if (!shopId) {
+        return res.status(400).json({ message: "shopId not found" });
+    }
+    try {
+        const offer = yield index_1.prisma.offer.create({
+            data: {
+                type,
+                title,
+                description,
+                minimum_amount,
+                shop: parseInt(shopId),
+                product: product ? parseInt(product) : null,
+                percentage: percentage ? parseInt(percentage) : null,
+                fixed: fixed ? parseInt(fixed) : null,
+                coinValue: coinValue ? parseInt(coinValue) : null
+            },
+            include: {
+                products: {
+                    select: {
+                        id: true,
+                        name: true,
+                        price: true,
+                        image: true
+                    }
+                }
+            }
+        });
+        return res.status(201).json({ message: "created successfully", offer });
+    }
+    catch (e) {
+        console.log(e);
+        return res.status(500).json({ message: "error while creating the offer" });
+    }
+}));
+exports.shopRouter.put("/:shopId/offers/:offerId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shopId, offerId } = req.params;
+    const { type, fixed, title, product, percentage, description, minimum_amount, coinValue } = req.body;
+    if (!shopId || !offerId) {
+        return res.status(400).json({ message: "shopId or offerId not found" });
+    }
+    try {
+        // First check if the offer exists and belongs to the shop
+        const existingOffer = yield index_1.prisma.offer.findFirst({
+            where: {
+                id: parseInt(offerId),
+                shop: parseInt(shopId)
+            }
+        });
+        if (!existingOffer) {
+            return res.status(404).json({ message: "Offer not found or doesn't belong to this shop" });
+        }
+        const updatedOffer = yield index_1.prisma.offer.update({
+            where: {
+                id: parseInt(offerId)
+            },
+            data: {
+                type,
+                title,
+                description,
+                minimum_amount,
+                product: product ? parseInt(product) : null,
+                percentage: percentage ? parseInt(percentage) : null,
+                fixed: fixed ? parseInt(fixed) : null,
+                coinValue: coinValue ? parseInt(coinValue) : null
+            },
+            include: {
+                products: {
+                    select: {
+                        id: true,
+                        name: true,
+                        price: true,
+                        image: true
+                    }
+                }
+            }
+        });
+        return res.status(200).json({ message: "updated successfully", offer: updatedOffer });
+    }
+    catch (e) {
+        console.log(e);
+        return res.status(500).json({ message: "error while updating the offer" });
+    }
+}));
+// DELETE route to delete an offer
+exports.shopRouter.delete("/:shopId/offers/:offerId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shopId, offerId } = req.params;
+    if (!shopId || !offerId) {
+        return res.status(400).json({ message: "shopId or offerId not found" });
+    }
+    try {
+        // First check if the offer exists and belongs to the shop
+        const existingOffer = yield index_1.prisma.offer.findFirst({
+            where: {
+                id: parseInt(offerId),
+                shop: parseInt(shopId)
+            }
+        });
+        if (!existingOffer) {
+            return res.status(404).json({ message: "Offer not found or doesn't belong to this shop" });
+        }
+        yield index_1.prisma.offer.delete({
+            where: {
+                id: parseInt(offerId)
+            }
+        });
+        return res.status(200).json({ message: "deleted successfully" });
+    }
+    catch (e) {
+        console.log(e);
+        return res.status(500).json({ message: "error while deleting the offer" });
+    }
+}));
+// GET route to fetch products for a specific shop (needed for the product dropdown)
+exports.shopRouter.get("/:shopId/products", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shopId } = req.params;
+    if (!shopId) {
+        return res.status(400).json({ message: "shopId not found" });
+    }
+    try {
+        const products = yield index_1.prisma.product.findMany({
+            where: {
+                shopId: parseInt(shopId)
+            },
+            select: {
+                id: true,
+                name: true,
+                price: true,
+                quantity: true
+            }
+        });
+        return res.status(200).json(products);
+    }
+    catch (e) {
+        console.log(e);
+        return res.status(500).json({ message: "error while fetching products" });
+    }
+}));

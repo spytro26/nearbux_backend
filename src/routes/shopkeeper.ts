@@ -1733,62 +1733,189 @@ shopRouter.post("/feedback", async (req, res): Promise<any> => {
   percentage 
 
 }
-
-  shopRouter.post("/createoffer", async (req, res) : Promise <any> =>{
-    const {type  ,fixed, title , product, percentage,  description , minimum_amount, shopKeeper   } = req.body;
-    try {
-       await prisma.offer.create({
-      data  : {
-        type , 
-        title , 
+// GET route to fetch offers for a specific shop (updated to include product details)
+shopRouter.get("/:shopId/offers", async (req, res): Promise<any> => {
+  const { shopId } = req.params;
+  
+  if (!shopId) {
+    return res.status(400).json({ message: "shopId not found" });
+  }
+  
+  try {
+    const offers = await prisma.offer.findMany({
+      where: {
+        shop: parseInt(shopId)
+      },
+      include: {
+        products: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            image: true
+          }
+        }
+      }
+    });
+    
+    return res.status(200).json(offers);
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ message: "error while fetching the offers" });
+  }
+});
+// POST route to create offer (matches frontend expectation)
+shopRouter.post("/:shopId/offers", async (req, res): Promise<any> => {
+  const { shopId } = req.params;
+  const { type, fixed, title, product, percentage, description, minimum_amount, coinValue } = req.body;
+  
+  if (!shopId) {
+    return res.status(400).json({ message: "shopId not found" });
+  }
+  
+  try {
+    const offer = await prisma.offer.create({
+      data: {
+        type,
+        title,
         description,
         minimum_amount,
-        shop : shopKeeper,
-        product,
-        percentage,
-        fixed
-        
-        
-      }
-    })
-
-    }catch(e){
-      console.log(e);
-      return res.status(500).json({message : "error while creating the offer "});
-
-    }
-    return res.status(200).json({message : "created succefully"});
-   
-    // for commmit 
-    
-  });
-
-
-  shopRouter.post("/getoffer", async (req, res) : Promise <any> =>{
-    const {shopId } = req.body;
-    if(!shopId){
-      return res.json({message : "shopId not found"});
-
-    }
-
-    try {
-      const offers = await prisma.offer.findMany({
-        where : {
-          shop : shopId
-
+        shop: parseInt(shopId),
+        product: product ? parseInt(product) : null,
+        percentage: percentage ? parseInt(percentage) : null,
+        fixed: fixed ? parseInt(fixed) : null,
+        coinValue: coinValue ? parseInt(coinValue) : null
+      },
+      include: {
+        products: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            image: true
+          }
         }
-        
+      }
+    });
+    
+    return res.status(201).json({ message: "created successfully", offer });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ message: "error while creating the offer" });
+  }
+});
 
-      });
-
-      return res.status(200).json({message : offers});
-
-    } catch (e){
-      console.log(e);
-      return res.status(500).json({message : "error while fetching the offers"})  ;
-      
+shopRouter.put("/:shopId/offers/:offerId", async (req, res): Promise<any> => {
+  const { shopId, offerId } = req.params;
+  const { type, fixed, title, product, percentage, description, minimum_amount, coinValue } = req.body;
+  
+  if (!shopId || !offerId) {
+    return res.status(400).json({ message: "shopId or offerId not found" });
+  }
+  
+  try {
+    // First check if the offer exists and belongs to the shop
+    const existingOffer = await prisma.offer.findFirst({
+      where: {
+        id: parseInt(offerId),
+        shop: parseInt(shopId)
+      }
+    });
+    
+    if (!existingOffer) {
+      return res.status(404).json({ message: "Offer not found or doesn't belong to this shop" });
     }
+    
+    const updatedOffer = await prisma.offer.update({
+      where: {
+        id: parseInt(offerId)
+      },
+      data: {
+        type,
+        title,
+        description,
+        minimum_amount,
+        product: product ? parseInt(product) : null,
+        percentage: percentage ? parseInt(percentage) : null,
+        fixed: fixed ? parseInt(fixed) : null,
+        coinValue: coinValue ? parseInt(coinValue) : null
+      },
+      include: {
+        products: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            image: true
+          }
+        }
+      }
+    });
+    
+    return res.status(200).json({ message: "updated successfully", offer: updatedOffer });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ message: "error while updating the offer" });
+  }
+});
+// DELETE route to delete an offer
+shopRouter.delete("/:shopId/offers/:offerId", async (req, res): Promise<any> => {
+  const { shopId, offerId } = req.params;
+  
+  if (!shopId || !offerId) {
+    return res.status(400).json({ message: "shopId or offerId not found" });
+  }
+  
+  try {
+    // First check if the offer exists and belongs to the shop
+    const existingOffer = await prisma.offer.findFirst({
+      where: {
+        id: parseInt(offerId),
+        shop: parseInt(shopId)
+      }
+    });
+    
+    if (!existingOffer) {
+      return res.status(404).json({ message: "Offer not found or doesn't belong to this shop" });
+    }
+    
+    await prisma.offer.delete({
+      where: {
+        id: parseInt(offerId)
+      }
+    });
+    
+    return res.status(200).json({ message: "deleted successfully" });
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ message: "error while deleting the offer" });
+  }
+});
 
-
-
-  })
+// GET route to fetch products for a specific shop (needed for the product dropdown)
+shopRouter.get("/:shopId/products", async (req, res): Promise<any> => {
+  const { shopId } = req.params;
+  
+  if (!shopId) {
+    return res.status(400).json({ message: "shopId not found" });
+  }
+  
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        shopId: parseInt(shopId)
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        quantity: true
+      }
+    });
+    
+    return res.status(200).json(products);
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ message: "error while fetching products" });
+  }
+});

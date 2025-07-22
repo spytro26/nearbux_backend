@@ -9,6 +9,7 @@ const app = express();
 const cron = require('node-cron');
 app.use(express.json());
 export const shopRouter =  express.Router();
+// signup for buisnessman
  shopRouter.post("/signup", async (req , res) : Promise <any>  =>{
     
      const {name , username , password , phoneNumber} = req.body;
@@ -87,7 +88,8 @@ export const shopRouter =  express.Router();
      
  
   });
-
+  
+//sinup for signin
 shopRouter.post("/signin", async (req, res) : Promise <any> =>{
 
    const {  userInput , password } = req.body ; 
@@ -156,7 +158,7 @@ shopRouter.post("/signin", async (req, res) : Promise <any> =>{
        const token = jwt.sign({id : foundUser.id , shopId : shopId?.id}, jwt_pass);
        res.status(200).json({ token , shopId : shopId.id, ownerId : foundUser.id     } ); 
 })
-
+// no phone or username taken 
  shopRouter.post("/validate",  async (req, res) : Promise <any>=>{
     const { 
       username,
@@ -201,7 +203,7 @@ shopRouter.post("/signin", async (req, res) : Promise <any> =>{
     
 
  })
-
+// route to chnge the password 
 shopRouter.post("/updatepass", async(req, res)  : Promise<any> =>{
   const {phoneNumber, newPassword} = req.body;
   
@@ -242,7 +244,7 @@ shopRouter.post("/updatepass", async(req, res)  : Promise<any> =>{
 
 
 });
-
+   // returns the shopkeeper  id  by taking phone 
 shopRouter.post("/id" , async (req, res )  : Promise <any> =>{
   const {phone} = req.body;
 let keeper ; 
@@ -262,6 +264,7 @@ try {
 
 });
 
+// creates the shop information , by taking pin localARea ... 
 shopRouter.post("/info", async (req, res): Promise<any> => {
   const { shopName, tagline, pin, localArea, coinValue, ownerId, opens, closes } = req.body;
 
@@ -358,7 +361,7 @@ shopRouter.post('/create-promotion', async (req, res) : Promise<any> => {
     });
   }
 });
-
+// get the promotion information 
 shopRouter.get("/promotions/:shopId", async (req, res) : Promise <any> => {
   const shopId = parseInt(req.params.shopId);
   if(!shopId){
@@ -430,7 +433,7 @@ shopRouter.delete('/delete-promotion/:id', async (req, res) : Promise<any> => {
     });
   }
 });
-
+// check if already adver going 
 shopRouter.post("/already", async (req, res) : Promise<any> =>{
   const {shopId} = req.body; 
   let shop = parseInt(shopId);
@@ -455,7 +458,7 @@ shopRouter.post("/already", async (req, res) : Promise<any> =>{
  
     
 });
-
+//return product and consumer details for the   shop
 shopRouter.post("/orders", async (req , res) : Promise <any> =>{
 
   const {shopId} = req.body;
@@ -497,6 +500,7 @@ shopRouter.post("/orders", async (req , res) : Promise <any> =>{
   
 });
 
+// change order status 
 shopRouter.put("/orders/update-status", async (req, res)  : Promise <any> => {
   const { orderId, status } = req.body;
   
@@ -526,7 +530,7 @@ shopRouter.post('/analytics', async (req, res)  : Promise <any>  => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // 1. Get top selling items with total quantities sold (only CONFIRMED and COMPLETED orders)
+    // 1. Get  top selling items with total quantities sold (only CONFIRMED and COMPLETED orders)
     const topSellingItems = await prisma.order.groupBy({
       by: ['productId'],
       where: {
@@ -1655,7 +1659,7 @@ shopRouter.post("/feedback", async (req, res): Promise<any> => {
   shopRouter.post("/own/already", async (req, res) : Promise<any> =>{
     const {storedownerIds} = req.body;
     let ankush = 0;
-    console.log("hitted") ;
+    
 
     try {
       const ispresent = await prisma.shopKeeper.findFirst({
@@ -1757,6 +1761,7 @@ shopRouter.get("/:shopId/offers", async (req, res): Promise<any> => {
         }
       }
     });
+    console.log(offers);
     
     return res.status(200).json(offers);
   } catch (e) {
@@ -1903,7 +1908,7 @@ shopRouter.get("/:shopId/products", async (req, res): Promise<any> => {
   try {
     const products = await prisma.product.findMany({
       where: {
-        shopId: parseInt(shopId)
+        shopId: parseInt(shopId)  
       },
       select: {
         id: true,
@@ -1919,3 +1924,59 @@ shopRouter.get("/:shopId/products", async (req, res): Promise<any> => {
     return res.status(500).json({ message: "error while fetching products" });
   }
 });
+
+
+shopRouter.get("/:phone/present" , async (req , res) : Promise<any>=>{
+   let {phone}  = req.params;
+   phone = '+91' + phone;
+
+
+   try {
+    const present = await prisma.user.findFirst({where :{
+      phone , 
+    }});
+    
+
+
+
+    if(present){
+      return res.status(200).json({message :1});
+    }
+    else {
+      return res.status(200).json({message : 0});
+
+    }
+   }catch(e){
+    return res.status(500).json({messsage : "error"});
+
+   }
+
+
+
+});
+
+
+
+shopRouter.get("/:phone/coins", async (req, res) : Promise <any> =>{
+  let coins = 0; 
+  const {phone } = req.params;
+try {
+  const availabe  = await prisma.user.findFirst({where :{
+    phone ,
+
+  },
+select : {
+  coinsAvailable : true
+}});
+console.log(availabe);
+return res.status(200).json({message : availabe?.coinsAvailable});
+
+
+}catch(e){
+  console.error("error while checking coin" + e);
+  return res.status(500).json({message : "error"})
+}
+})
+
+
+  

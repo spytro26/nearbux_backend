@@ -1761,7 +1761,7 @@ shopRouter.get("/:shopId/offers", async (req, res): Promise<any> => {
         }
       }
     });
-    console.log(offers);
+   
     
     return res.status(200).json(offers);
   } catch (e) {
@@ -1959,16 +1959,17 @@ shopRouter.get("/:phone/present" , async (req , res) : Promise<any>=>{
 
 shopRouter.get("/:phone/coins", async (req, res) : Promise <any> =>{
   let coins = 0; 
-  const {phone } = req.params;
+  let {phone } = req.params;
+     
+  phone = '+91' + phone;
 try {
   const availabe  = await prisma.user.findFirst({where :{
     phone ,
 
   },
-select : {
-  coinsAvailable : true
-}});
-console.log(availabe);
+
+});
+
 return res.status(200).json({message : availabe?.coinsAvailable});
 
 
@@ -1980,3 +1981,35 @@ return res.status(200).json({message : availabe?.coinsAvailable});
 
 
   
+
+shopRouter.post("/updatecoinss", async (req, res) : Promise <any> =>{
+
+   let  {updatedCoin , phone} = req.body;
+     phone = '+91' + phone;
+     console.log("updated coin" + updatedCoin);
+     updatedCoin = parseInt(updatedCoin);
+     console.log("updating coins")
+     
+   let succ  = 0;
+   try {
+     const response =  await prisma.user.update({
+      where : {
+        phone
+      },
+      data  : {
+        coinsAvailable : updatedCoin
+      }
+     });
+     if(response){
+      console.log(response);
+      succ =1 ; 
+     }
+     return res.status(200).json( {"succ" : succ});
+   }catch(e){
+    console.error(e);
+    return res.json({succ});
+
+   }
+
+
+})

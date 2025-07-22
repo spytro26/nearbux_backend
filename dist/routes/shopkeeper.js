@@ -1472,7 +1472,6 @@ exports.shopRouter.get("/:shopId/offers", (req, res) => __awaiter(void 0, void 0
                 }
             }
         });
-        console.log(offers);
         return res.status(200).json(offers);
     }
     catch (e) {
@@ -1641,19 +1640,44 @@ exports.shopRouter.get("/:phone/present", (req, res) => __awaiter(void 0, void 0
 }));
 exports.shopRouter.get("/:phone/coins", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     let coins = 0;
-    const { phone } = req.params;
+    let { phone } = req.params;
+    phone = '+91' + phone;
     try {
         const availabe = yield index_1.prisma.user.findFirst({ where: {
                 phone,
             },
-            select: {
-                coinsAvailable: true
-            } });
-        console.log(availabe);
+        });
         return res.status(200).json({ message: availabe === null || availabe === void 0 ? void 0 : availabe.coinsAvailable });
     }
     catch (e) {
         console.error("error while checking coin" + e);
         return res.status(500).json({ message: "error" });
+    }
+}));
+exports.shopRouter.post("/updatecoinss", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    let { updatedCoin, phone } = req.body;
+    phone = '+91' + phone;
+    console.log("updated coin" + updatedCoin);
+    updatedCoin = parseInt(updatedCoin);
+    console.log("updating coins");
+    let succ = 0;
+    try {
+        const response = yield index_1.prisma.user.update({
+            where: {
+                phone
+            },
+            data: {
+                coinsAvailable: updatedCoin
+            }
+        });
+        if (response) {
+            console.log(response);
+            succ = 1;
+        }
+        return res.status(200).json({ "succ": succ });
+    }
+    catch (e) {
+        console.error(e);
+        return res.json({ succ });
     }
 }));

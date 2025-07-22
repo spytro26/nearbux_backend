@@ -23,6 +23,7 @@ const app = (0, express_1.default)();
 const cron = require('node-cron');
 app.use(express_1.default.json());
 exports.shopRouter = express_1.default.Router();
+// signup for buisnessman
 exports.shopRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, username, password, phoneNumber } = req.body;
     const user = zod_1.z.object({
@@ -84,6 +85,7 @@ exports.shopRouter.post("/signup", (req, res) => __awaiter(void 0, void 0, void 
         });
     }
 }));
+//sinup for signin
 exports.shopRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userInput, password } = req.body;
     let foundUser = null;
@@ -137,6 +139,7 @@ exports.shopRouter.post("/signin", (req, res) => __awaiter(void 0, void 0, void 
     const token = jsonwebtoken_1.default.sign({ id: foundUser.id, shopId: shopId === null || shopId === void 0 ? void 0 : shopId.id }, jwt_pass);
     res.status(200).json({ token, shopId: shopId.id, ownerId: foundUser.id });
 }));
+// no phone or username taken 
 exports.shopRouter.post("/validate", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { username, phoneNumber } = req.body;
     try {
@@ -161,6 +164,7 @@ exports.shopRouter.post("/validate", (req, res) => __awaiter(void 0, void 0, voi
         return res.status(400).json({ message: "error while validating" });
     }
 }));
+// route to chnge the password 
 exports.shopRouter.post("/updatepass", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { phoneNumber, newPassword } = req.body;
     const already = yield index_1.prisma.shopKeeper.findFirst({
@@ -193,6 +197,7 @@ exports.shopRouter.post("/updatepass", (req, res) => __awaiter(void 0, void 0, v
         return res.status(400).json({ messsage: "user not found " });
     }
 }));
+// returns the shopkeeper  id  by taking phone 
 exports.shopRouter.post("/id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { phone } = req.body;
     let keeper;
@@ -208,6 +213,7 @@ exports.shopRouter.post("/id", (req, res) => __awaiter(void 0, void 0, void 0, f
     }
     return res.status(200).json({ message: keeper === null || keeper === void 0 ? void 0 : keeper.id });
 }));
+// creates the shop information , by taking pin localARea ... 
 exports.shopRouter.post("/info", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { shopName, tagline, pin, localArea, coinValue, ownerId, opens, closes } = req.body;
     try {
@@ -291,6 +297,7 @@ exports.shopRouter.post('/create-promotion', (req, res) => __awaiter(void 0, voi
         });
     }
 }));
+// get the promotion information 
 exports.shopRouter.get("/promotions/:shopId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const shopId = parseInt(req.params.shopId);
     if (!shopId) {
@@ -356,6 +363,7 @@ exports.shopRouter.delete('/delete-promotion/:id', (req, res) => __awaiter(void 
         });
     }
 }));
+// check if already adver going 
 exports.shopRouter.post("/already", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { shopId } = req.body;
     let shop = parseInt(shopId);
@@ -377,6 +385,7 @@ exports.shopRouter.post("/already", (req, res) => __awaiter(void 0, void 0, void
         return res.status(404).json({ error: "error occured while db call" });
     }
 }));
+//return product and consumer details for the   shop
 exports.shopRouter.post("/orders", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { shopId } = req.body;
     try {
@@ -409,6 +418,7 @@ exports.shopRouter.post("/orders", (req, res) => __awaiter(void 0, void 0, void 
         return res.status(502).json({ message: "error while db call" });
     }
 }));
+// change order status 
 exports.shopRouter.put("/orders/update-status", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { orderId, status } = req.body;
     try {
@@ -432,7 +442,7 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
         // Get date 30 days ago
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        // 1. Get top selling items with total quantities sold (only CONFIRMED and COMPLETED orders)
+        // 1. Get  top selling items with total quantities sold (only CONFIRMED and COMPLETED orders)
         const topSellingItems = yield index_1.prisma.order.groupBy({
             by: ['productId'],
             where: {
@@ -1392,7 +1402,6 @@ exports.shopRouter.post("/shopname", (req, res) => __awaiter(void 0, void 0, voi
 exports.shopRouter.post("/own/already", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { storedownerIds } = req.body;
     let ankush = 0;
-    console.log("hitted");
     try {
         const ispresent = yield index_1.prisma.shopKeeper.findFirst({
             where: {
@@ -1463,6 +1472,7 @@ exports.shopRouter.get("/:shopId/offers", (req, res) => __awaiter(void 0, void 0
                 }
             }
         });
+        console.log(offers);
         return res.status(200).json(offers);
     }
     catch (e) {
@@ -1609,5 +1619,41 @@ exports.shopRouter.get("/:shopId/products", (req, res) => __awaiter(void 0, void
     catch (e) {
         console.log(e);
         return res.status(500).json({ message: "error while fetching products" });
+    }
+}));
+exports.shopRouter.get("/:phone/present", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    let { phone } = req.params;
+    phone = '+91' + phone;
+    try {
+        const present = yield index_1.prisma.user.findFirst({ where: {
+                phone,
+            } });
+        if (present) {
+            return res.status(200).json({ message: 1 });
+        }
+        else {
+            return res.status(200).json({ message: 0 });
+        }
+    }
+    catch (e) {
+        return res.status(500).json({ messsage: "error" });
+    }
+}));
+exports.shopRouter.get("/:phone/coins", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    let coins = 0;
+    const { phone } = req.params;
+    try {
+        const availabe = yield index_1.prisma.user.findFirst({ where: {
+                phone,
+            },
+            select: {
+                coinsAvailable: true
+            } });
+        console.log(availabe);
+        return res.status(200).json({ message: availabe === null || availabe === void 0 ? void 0 : availabe.coinsAvailable });
+    }
+    catch (e) {
+        console.error("error while checking coin" + e);
+        return res.status(500).json({ message: "error" });
     }
 }));

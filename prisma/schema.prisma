@@ -8,19 +8,21 @@ datasource db {
 }
 
 model User {
-  id             Int      @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   name           String
-  username       String   @unique
-  phone          String   @unique
+  username       String        @unique
+  phone          String        @unique
   password       String
   pin            String?
   localArea      String?
-  coinsAvailable Int?     @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  coinsAvailable Int?          @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   cartItems      Cart[]
-  coinsReceived  Coin[]   @relation("ToUser")
-  orders         Order[]  @relation("UserOrders")
+  coinsSentToUser       ShopToUserCoin[]  @relation("ShopToUserCoins")
+  coinsReceivedFromUser UserToShopCoin[]  @relation("UserToShopCoins")
+
+  orderGroups    OrderGroup[]  @relation("UserOrderGroups") // New relation
 }
 
 model ShopKeeper {
@@ -37,53 +39,92 @@ model ShopKeeper {
 }
 
 model Shop {
-  id        Int        @id @default(autoincrement())
-  tagline   String
-  image     String?
-  pin       String
-  localArea String
-  ownerId   Int
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  name      String
-  rating    Int        @default(0)
-  closes    DateTime?
-  coinValue Int
-  opens     DateTime?
-  isActive  Boolean    @default(true)
-  adver     Adver[]
-  coinsSent Coin[]     @relation("FromShop")
-  orders    Order[]    @relation("ShopOrders")
-  products  Product[]
-  offer Offer[] 
-  owner     ShopKeeper @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  id          Int          @id @default(autoincrement())
+  tagline     String
+  image       String?
+  pin         String
+  localArea   String
+  ownerId     Int
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  name        String
+  rating      Int          @default(3)
+  closes      DateTime?
+  coinValue   Int
+  opens       DateTime?
+  isActive    Boolean      @default(true)
+  adver       Adver[]
+ coinsReceivedFromShop ShopToUserCoin[]  @relation("ShopToUserCoins")
+  coinsSentToShop       UserToShopCoin[]  @relation("UserToShopCoins")
+  products    Product[]
+  offer       Offer[]
+  cart        Cart[]
+  orderGroups OrderGroup[] @relation("ShopOrderGroups") // New relation
+  owner       ShopKeeper   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+// New model to group orders placed together
+model OrderGroup {
+  id            Int         @id @default(autoincrement())
+  userId        Int?
+  shopId        Int
+  totalAmount   Int         @default(0)
+  coinsUsed     Int         @default(0)
+  status        OrderStatus @default(PENDING)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  soldOffline   Boolean     @default(false)
+  
+  // Relations
+  user          User?       @relation("UserOrderGroups", fields: [userId], references: [id], onDelete: SetNull)
+  shop          Shop        @relation("ShopOrderGroups", fields: [shopId], references: [id], onDelete: Cascade)
+  orders        Order[]     @relation("OrderGroupItems")
 }
 
 model Order {
-  id          Int         @id @default(autoincrement())
-  soldToId    Int?
-  productId   Int
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  quantity    Int
-  shopId      Int
-  status      OrderStatus @default(PENDING)
-  soldOffline Boolean     @default(false)
-  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  seller      Shop        @relation("ShopOrders", fields: [shopId], references: [id], onDelete: Cascade)
-  consumer    User?       @relation("UserOrders", fields: [soldToId], references: [id], onDelete: SetNull)
+  id           Int         @id @default(autoincrement())
+  orderGroupId Int         // Foreign key to OrderGroup
+  offerId      Int?
+  productId    Int
+  quantity     Int
+  unitPrice    Int         // Store the price at time of order
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Relations
+  orderGroup   OrderGroup  @relation("OrderGroupItems", fields: [orderGroupId], references: [id], onDelete: Cascade)
+  offer        Offer?      @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  // Remove these fields as they're now in OrderGroup:
+  // soldToId, shopId, status, soldOffline, coinsUsed
 }
 
-model Coin {
-  id        Int      @id @default(autoincrement())
-  transFrom Int
-  transTo   Int
-  volume    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  fromShop  Shop     @relation("FromShop", fields: [transFrom], references: [id], onDelete: Cascade)
-  toUser    User     @relation("ToUser", fields: [transTo], references: [id], onDelete: Cascade)
+model ShopToUserCoin {
+  id             Int      @id @default(autoincrement())
+  shopId         Int      // transFrom
+  userId         Int      // transTo  
+  volume         Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  shop           Shop     @relation("ShopToUserCoins", fields: [shopId], references: [id], onDelete: Cascade)
+  user           User     @relation("ShopToUserCoins", fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// User to Shop transactions  
+model UserToShopCoin {
+  id             Int      @id @default(autoincrement())
+  userId         Int      // transFrom
+  shopId         Int      // transTo
+  volume         Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  user           User     @relation("UserToShopCoins", fields: [userId], references: [id], onDelete: Cascade)
+  shop           Shop     @relation("UserToShopCoins", fields: [shopId], references: [id], onDelete: Cascade)
+}
+
 
 model Product {
   id                   Int      @id @default(autoincrement())
@@ -105,8 +146,11 @@ model Cart {
   id        Int      @id @default(autoincrement())
   productId Int
   userId    Int
+  quantity  Int      @default(1)
+  shopId    Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  shops     Shop?    @relation(fields: [shopId], references: [id], onDelete: Cascade)
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -137,19 +181,19 @@ model Feedback {
 }
 
 model Offer {
-  id Int @id @default(autoincrement())
-  type OfferType
-  title String?
-  description String?
+  id             Int       @id @default(autoincrement())
+  type           OfferType
+  title          String?
+  description    String?
   minimum_amount Int?
-  product Int?
-  percentage Int?
-  coinValue Int?
-  fixed Int?
-  shop Int 
-  shops Shop @relation(fields: [shop], references: [id] , onDelete: Cascade)
-  products Product? @relation(fields: [product], references: [id] , onDelete: Cascade)
-  
+  product        Int?
+  percentage     Int?
+  coinValue      Int?
+  fixed          Int?
+  shop           Int
+  orders         Order[]
+  shops          Shop      @relation(fields: [shop], references: [id], onDelete: Cascade)
+  products       Product?  @relation(fields: [product], references: [id], onDelete: Cascade)
 }
 
 enum OrderStatus {
@@ -158,9 +202,9 @@ enum OrderStatus {
   CANCELLED
   COMPLETED
 }
-enum OfferType {
-  product 
-  money 
-  percentage 
 
+enum OfferType {
+  product
+  money
+  percentage
 }

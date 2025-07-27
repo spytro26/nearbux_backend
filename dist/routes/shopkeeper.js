@@ -386,53 +386,253 @@ exports.shopRouter.post("/already", (req, res) => __awaiter(void 0, void 0, void
     }
 }));
 //return product and consumer details for the   shop
-exports.shopRouter.post("/orders", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { shopId } = req.body;
-    try {
-        const response = yield index_1.prisma.order.findMany({
-            where: {
-                shopId: parseInt(shopId)
-            },
-            include: {
-                consumer: {
-                    select: {
-                        id: true,
-                        name: true,
-                        username: true,
-                    }
-                },
-                product: {
-                    select: {
-                        id: true,
-                        name: true,
-                        price: true,
-                        image: true,
-                    }
-                }
-            }
-        });
-        return res.status(200).json({ message: response });
-    }
-    catch (e) {
-        console.error(e + " error occurred");
-        return res.status(502).json({ message: "error while db call" });
-    }
-}));
-// change order status 
-exports.shopRouter.put("/orders/update-status", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { orderId, status } = req.body;
-    try {
-        const updatedOrder = yield index_1.prisma.order.update({
-            where: { id: parseInt(orderId) },
-            data: { status: status }
-        });
-        return res.status(200).json({ message: "Order status updated", order: updatedOrder });
-    }
-    catch (error) {
-        console.error("Error updating order status:", error);
-        return res.status(500).json({ error: "Failed to update order status" });
-    }
-}));
+// shopRouter.post("/orders", async (req , res) : Promise <any> =>{
+//   const {shopId} = req.body;
+//   try {
+//     // Get order groups with their associated orders
+//     const orderGroups = await prisma.orderGroup.findMany({
+//       where : {
+//         shopId : parseInt(shopId)
+//       },
+//       include : {
+//         user : {
+//           select : {
+//             id : true,
+//             name : true,
+//             username: true,
+//           }
+//         },
+//         orders: {
+//           include: {
+//             product : {
+//               select : {
+//                 id : true,
+//                 name : true,
+//                 price : true,
+//                 image : true,
+//               }
+//             }
+//           }
+//         }
+//       },
+//       orderBy: {
+//         createdAt: 'desc'
+//       }
+//     });
+//     // Flatten the structure to match the old format
+//      //@ts-ignore
+//     const orders = [];
+//     orderGroups.forEach(orderGroup => {
+//       orderGroup.orders.forEach(order => {
+//         orders.push({
+//           id: order.id,
+//           soldToId: orderGroup.userId,
+//           productId: order.productId,
+//           createdAt: order.createdAt,
+//           updatedAt: order.updatedAt,
+//           quantity: order.quantity,
+//           shopId: orderGroup.shopId,
+//           status: orderGroup.status,
+//           soldOffline: orderGroup.soldOffline,
+//           consumer: orderGroup.user,
+//           product: order.product,
+//           orderGroupId: orderGroup.id,
+//           totalAmount: orderGroup.totalAmount,
+//           coinsUsed: orderGroup.coinsUsed,
+//           unitPrice: order.unitPrice
+//         });
+//       });
+//     });
+//  //@ts-ignore
+//     return res.status(200).json({message : orders});
+//   } catch(e) {
+//     console.error(e + " error occurred");
+//     return res.status(502).json({message : "error while db call"});
+//   }
+// });
+// shopRouter.post("/orders", async (req, res) : Promise<any> => {
+//   const { shopId } = req.body;
+//   try {
+//     // Get order groups with their associated orders
+//     const orderGroups = await prisma.orderGroup.findMany({
+//       where: {
+//         shopId: parseInt(shopId)
+//       },
+//       include: {
+//         user: {
+//           select: {
+//             id: true,
+//             name: true,
+//             username: true,
+//             phone: true,
+//             localArea: true
+//           }
+//         },
+//         shop: {
+//           select: {
+//             id: true,
+//             name: true,
+//             tagline: true,
+//             coinValue: true,
+//             localArea: true
+//           }
+//         },
+//         orders: {
+//           include: {
+//             product: {
+//               select: {
+//                 id: true,
+//                 name: true,
+//                 price: true,
+//                 image: true,
+//               }
+//             },
+//             offer: {
+//               select: {
+//                 id: true,
+//                 type: true,
+//                 title: true,
+//                 description: true,
+//                 percentage: true,
+//                 fixed: true,
+//                 coinValue: true
+//               }
+//             }
+//           }
+//         }
+//       },
+//       orderBy: {
+//         createdAt: 'desc'
+//       }
+//     });
+//     // Transform order groups to include calculated totals and offer applications
+//     const transformedOrderGroups = orderGroups.map(orderGroup => {
+//       let subtotal = 0;
+//       let totalDiscount = 0;
+//       //@ts-ignore
+//       let freeProducts = [];
+//       const processedOrders = orderGroup.orders.map(order => {
+//         const product = order.product;
+//         const offer = order.offer;
+//         let itemTotal = order.unitPrice * order.quantity;
+//         let itemDiscount = 0;
+//         let isFree = false;
+//         // Apply offers
+//         if (offer) {
+//           switch (offer.type) {
+//             case 'product':
+//               // Free product offer
+//               isFree = true;
+//               itemTotal = 0;
+//               freeProducts.push({
+//                 ...product,
+//                 quantity: order.quantity,
+//                 offerTitle: offer.title
+//               });
+//               break;
+//             case 'percentage':
+//               // Percentage discount
+//                 //@ts-ignore
+//               itemDiscount = (itemTotal * offer.percentage) / 100;
+//               itemTotal = itemTotal - itemDiscount;
+//               break;
+//             case 'money':
+//               // Fixed amount discount
+//               itemDiscount = Math.min(offer.fixed || 0, itemTotal);
+//               itemTotal = itemTotal - itemDiscount;
+//               break;
+//           }
+//         }
+//         if (!isFree) {
+//           subtotal += itemTotal;
+//         }
+//         totalDiscount += itemDiscount;
+//         return {
+//           ...order,
+//           product,
+//           offer,
+//           itemTotal: Math.round(itemTotal * 100) / 100, // Round to 2 decimal places
+//           itemDiscount: Math.round(itemDiscount * 100) / 100,
+//           isFree
+//         };
+//       });
+//       // Calculate coin discount if coins were used
+//       let coinDiscount = 0;
+//       if (orderGroup.coinsUsed > 0) {
+//         const coinValue = orderGroup.shop.coinValue; // Value of 100 coins
+//         const singleCoinValue = coinValue / 100;
+//         coinDiscount = orderGroup.coinsUsed * singleCoinValue;
+//       }
+//       const finalTotal = Math.round(subtotal - coinDiscount);
+//       // Calculate coins to be credited (0.1 coins per rupee, minimum 1 coin)
+//       const coinsToCredit = Math.floor(finalTotal * 0.1);
+//       return {
+//         id: orderGroup.id,
+//         userId: orderGroup.userId,
+//         shopId: orderGroup.shopId,
+//         status: orderGroup.status,
+//         createdAt: orderGroup.createdAt,
+//         updatedAt: orderGroup.updatedAt,
+//         soldOffline: orderGroup.soldOffline,
+//         consumer: orderGroup.user,
+//         shop: orderGroup.shop,
+//         orders: processedOrders,
+//           //@ts-ignore
+//         freeProducts,
+//         subtotal: Math.round(subtotal * 100) / 100,
+//         totalDiscount: Math.round(totalDiscount * 100) / 100,
+//         coinsUsed: orderGroup.coinsUsed,
+//         coinDiscount: Math.round(coinDiscount * 100) / 100,
+//         finalTotal,
+//         coinsToCredit: coinsToCredit >= 1 ? coinsToCredit : 0
+//       };
+//     });
+//     return res.status(200).json({ message: transformedOrderGroups });
+//   } catch (e) {
+//     console.error(e + " error occurred");
+//     return res.status(502).json({ message: "error while db call" });
+//   }
+// })
+// Updated route for changing order status
+// shopRouter.put("/orders/update-status", async (req, res) : Promise <any> => {
+//   const { orderId, status } = req.body;
+//   try {
+//     // First find the order to get its orderGroupId
+//     const order = await prisma.order.findUnique({
+//       where: { id: parseInt(orderId) },
+//       select: { orderGroupId: true }
+//     });
+//     if (!order) {
+//       return res.status(404).json({ error: "Order not found" });
+//     }
+//     // Update the status in the OrderGroup (since status is stored there)
+//     const updatedOrderGroup = await prisma.orderGroup.update({
+//       where: { id: order.orderGroupId },
+//       data: { status: status }
+//     });
+//     // Get the updated order with its group info for response
+//     const updatedOrder = await prisma.order.findUnique({
+//       where: { id: parseInt(orderId) },
+//       include: {
+//         orderGroup: {
+//           select: {
+//             status: true,
+//             totalAmount: true,
+//             coinsUsed: true
+//           }
+//         }
+//       }
+//     });
+//     return res.status(200).json({ 
+//       message: "Order status updated", 
+//       order: updatedOrder,
+//       orderGroup: updatedOrderGroup
+//     });
+//   } catch (error) {
+//     console.error("Error updating order status:", error);
+//     return res.status(500).json({ error: "Failed to update order status" });
+//   }
+// });
 exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { shopId } = req.body;
@@ -442,13 +642,16 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
         // Get date 30 days ago
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        // 1. Get  top selling items with total quantities sold (only CONFIRMED and COMPLETED orders)
+        // 1. Get top selling items with total quantities sold (only CONFIRMED and COMPLETED orders)
+        // Since shopId is now in OrderGroup, we need to join through OrderGroup
         const topSellingItems = yield index_1.prisma.order.groupBy({
             by: ['productId'],
             where: {
-                shopId: parseInt(shopId),
-                status: {
-                    in: ['CONFIRMED', 'COMPLETED'],
+                orderGroup: {
+                    shopId: parseInt(shopId),
+                    status: {
+                        in: ['CONFIRMED', 'COMPLETED'],
+                    },
                 },
             },
             _sum: {
@@ -462,7 +665,6 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
                     quantity: 'desc',
                 },
             },
-            // Show all products instead of limiting to top 10
         });
         // Get product details for the top selling items
         const productIds = topSellingItems.map(item => item.productId);
@@ -493,9 +695,9 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
             };
         });
         // 2. Get coins given by the shop in last 30 days
-        const coinsGiven = yield index_1.prisma.coin.findMany({
+        const coinsGiven = yield index_1.prisma.shopToUserCoin.findMany({
             where: {
-                transFrom: parseInt(shopId),
+                shopId: parseInt(shopId),
                 createdAt: {
                     gte: thirtyDaysAgo,
                 },
@@ -503,7 +705,7 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
             select: {
                 volume: true,
                 createdAt: true,
-                toUser: {
+                user: {
                     select: {
                         name: true,
                     },
@@ -513,14 +715,15 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
                 createdAt: 'desc',
             },
         });
-        // Calculate total coins given (since volume is a string, we need to parse and sum manually)
+        // Calculate total coins given (volume is now an integer, not string)
         const totalCoinsGiven = coinsGiven.reduce((sum, coin) => {
-            return sum + (parseInt(coin.volume) || 0);
+            return sum + (coin.volume || 0);
         }, 0);
         // Get detailed coin transactions for the chart
         const coinTransactions = coinsGiven;
         // 3. Get total accepted orders in last 30 days
-        const acceptedOrders = yield index_1.prisma.order.aggregate({
+        // Now we need to aggregate from OrderGroup instead of Order directly
+        const acceptedOrderGroups = yield index_1.prisma.orderGroup.aggregate({
             where: {
                 shopId: parseInt(shopId),
                 status: {
@@ -533,12 +736,26 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
             _count: {
                 id: true,
             },
+        });
+        // Get total quantity from orders in accepted order groups
+        const acceptedOrdersQuantity = yield index_1.prisma.order.aggregate({
+            where: {
+                orderGroup: {
+                    shopId: parseInt(shopId),
+                    status: {
+                        in: ['CONFIRMED', 'COMPLETED'],
+                    },
+                    createdAt: {
+                        gte: thirtyDaysAgo,
+                    },
+                },
+            },
             _sum: {
                 quantity: true,
             },
         });
-        // Get daily order counts for chart
-        const dailyOrders = yield index_1.prisma.order.groupBy({
+        // Get daily order counts for chart from OrderGroup
+        const dailyOrderGroups = yield index_1.prisma.orderGroup.groupBy({
             by: ['createdAt'],
             where: {
                 shopId: parseInt(shopId),
@@ -554,9 +771,9 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
             },
         });
         // Process daily orders for chart with proper typing
-        const ordersByDate = dailyOrders.reduce((acc, order) => {
-            const date = order.createdAt.toISOString().split('T')[0];
-            acc[date] = (acc[date] || 0) + order._count.id;
+        const ordersByDate = dailyOrderGroups.reduce((acc, orderGroup) => {
+            const date = orderGroup.createdAt.toISOString().split('T')[0];
+            acc[date] = (acc[date] || 0) + orderGroup._count.id;
             return acc;
         }, {});
         // Get shop details
@@ -581,15 +798,15 @@ exports.shopRouter.post('/analytics', (req, res) => __awaiter(void 0, void 0, vo
             summary: {
                 totalRevenue,
                 totalProductsSold: topSellingData.reduce((sum, item) => sum + item.totalQuantitySold, 0),
-                totalOrdersAccepted: acceptedOrders._count.id || 0,
+                totalOrdersAccepted: acceptedOrderGroups._count.id || 0,
                 totalCoinsGiven: totalCoinsGiven,
                 totalCoinTransactions: coinsGiven.length,
             },
             topSellingProducts: topSellingData,
             coinTransactions: coinTransactions.map(tx => ({
-                amount: parseInt(tx.volume),
+                amount: tx.volume,
                 date: tx.createdAt,
-                recipientName: tx.toUser.name,
+                recipientName: tx.user.name,
             })),
             dailyOrdersChart: Object.entries(ordersByDate).map(([date, count]) => ({
                 date,
@@ -1059,6 +1276,7 @@ exports.shopRouter.get('/:shopId/products', (req, res) => __awaiter(void 0, void
     }
 }));
 // POST /shop/:shopId/update-inventory - Update product quantities after billing
+// Updated route for updating inventory
 exports.shopRouter.post('/:shopId/update-inventory', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const shopId = parseInt(req.params.shopId);
@@ -1082,14 +1300,16 @@ exports.shopRouter.post('/:shopId/update-inventory', (req, res) => __awaiter(voi
         if (!shop) {
             return res.status(403).json({ error: 'Unauthorized: Shop not found or access denied' });
         }
-        // Start transaction to update all products and create orders
-        const updatePromises = items.map((item) => __awaiter(void 0, void 0, void 0, function* () {
+        // Calculate total amount for the order group
+        let totalAmount = 0;
+        const orderData = [];
+        // Validate all items first and calculate total
+        for (const item of items) {
             const productId = parseInt(item.productId);
             const quantityToReduce = parseInt(item.quantity);
             if (isNaN(productId) || isNaN(quantityToReduce) || quantityToReduce <= 0) {
                 throw new Error(`Invalid product ID or quantity for item: ${JSON.stringify(item)}`);
             }
-            // Get current product to check availability
             const currentProduct = yield index_1.prisma.product.findFirst({
                 where: {
                     id: productId,
@@ -1102,37 +1322,56 @@ exports.shopRouter.post('/:shopId/update-inventory', (req, res) => __awaiter(voi
             if (currentProduct.quantity < quantityToReduce) {
                 throw new Error(`Insufficient quantity for product ${currentProduct.name}. Available: ${currentProduct.quantity}, Required: ${quantityToReduce}`);
             }
+            totalAmount += currentProduct.price * quantityToReduce;
+            orderData.push({
+                productId,
+                quantityToReduce,
+                currentProduct,
+                unitPrice: currentProduct.price
+            });
+        }
+        // Create order group for offline sale
+        const orderGroup = yield index_1.prisma.orderGroup.create({
+            data: {
+                userId: null, // null since it's an offline sale
+                shopId: shopId,
+                totalAmount: totalAmount,
+                coinsUsed: 0,
+                status: 'COMPLETED',
+                soldOffline: true
+            }
+        });
+        // Process all items
+        const updatedProducts = [];
+        for (const item of orderData) {
             // Update product quantity
             const updatedProduct = yield index_1.prisma.product.update({
                 where: {
-                    id: productId
+                    id: item.productId
                 },
                 data: {
-                    quantity: currentProduct.quantity - quantityToReduce
+                    quantity: item.currentProduct.quantity - item.quantityToReduce
                 }
             });
-            // Create order record for offline sale
+            // Create individual order record
             yield index_1.prisma.order.create({
                 data: {
-                    shopId: shopId,
-                    productId: productId,
-                    quantity: quantityToReduce,
-                    soldOffline: true,
-                    status: 'COMPLETED',
-                    soldToId: null // null since it's an offline sale without user account
+                    orderGroupId: orderGroup.id,
+                    productId: item.productId,
+                    quantity: item.quantityToReduce,
+                    unitPrice: item.unitPrice
                 }
             });
-            return updatedProduct;
-        }));
-        // Execute all updates
-        const updatedProducts = yield Promise.all(updatePromises);
+            updatedProducts.push({
+                id: updatedProduct.id,
+                name: updatedProduct.name,
+                newQuantity: updatedProduct.quantity
+            });
+        }
         return res.status(200).json({
             message: 'Inventory updated successfully and orders created',
-            updatedProducts: updatedProducts.map(product => ({
-                id: product.id,
-                name: product.name,
-                newQuantity: product.quantity
-            }))
+            updatedProducts: updatedProducts,
+            orderGroupId: orderGroup.id
         });
     }
     catch (error) {
@@ -1318,19 +1557,19 @@ exports.shopRouter.delete('/:shopId/products/:productId', (req, res) => __awaite
         return res.status(500).json({ error: 'Internal server error' });
     }
 }));
-// GET /shop/:shopId/orders - Get all orders for a shop
 exports.shopRouter.get('/:shopId/orders', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const shopId = parseInt(req.params.shopId);
         if (isNaN(shopId)) {
             return res.status(400).json({ error: 'Invalid shop ID' });
         }
-        const orders = yield index_1.prisma.order.findMany({
+        // Get order groups with their associated orders
+        const orderGroups = yield index_1.prisma.orderGroup.findMany({
             where: {
                 shopId: shopId
             },
             include: {
-                consumer: {
+                user: {
                     select: {
                         id: true,
                         name: true,
@@ -1338,12 +1577,16 @@ exports.shopRouter.get('/:shopId/orders', (req, res) => __awaiter(void 0, void 0
                         phone: true
                     }
                 },
-                product: {
-                    select: {
-                        id: true,
-                        name: true,
-                        price: true,
-                        image: true
+                orders: {
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                name: true,
+                                price: true,
+                                image: true
+                            }
+                        }
                     }
                 }
             },
@@ -1351,6 +1594,30 @@ exports.shopRouter.get('/:shopId/orders', (req, res) => __awaiter(void 0, void 0
                 createdAt: 'desc'
             }
         });
+        // Flatten the structure to match the old format
+        //@ts-ignore
+        const orders = [];
+        orderGroups.forEach(orderGroup => {
+            orderGroup.orders.forEach(order => {
+                orders.push({
+                    id: order.id,
+                    soldToId: orderGroup.userId,
+                    productId: order.productId,
+                    createdAt: order.createdAt,
+                    updatedAt: order.updatedAt,
+                    quantity: order.quantity,
+                    shopId: orderGroup.shopId,
+                    status: orderGroup.status,
+                    soldOffline: orderGroup.soldOffline,
+                    consumer: orderGroup.user,
+                    product: order.product,
+                    orderGroupId: orderGroup.id,
+                    totalAmount: orderGroup.totalAmount,
+                    coinsUsed: orderGroup.coinsUsed
+                });
+            });
+        });
+        //@ts-ignore
         return res.status(200).json(orders);
     }
     catch (error) {
@@ -1638,46 +1905,995 @@ exports.shopRouter.get("/:phone/present", (req, res) => __awaiter(void 0, void 0
         return res.status(500).json({ messsage: "error" });
     }
 }));
-exports.shopRouter.get("/:phone/coins", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    let coins = 0;
-    let { phone } = req.params;
-    phone = '+91' + phone;
+exports.shopRouter.post("/:phone/coins", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const availabe = yield index_1.prisma.user.findFirst({ where: {
-                phone,
-            },
+        let { phone } = req.params;
+        let { shopId } = req.body;
+        phone = '+91' + phone;
+        shopId = parseInt(shopId);
+        console.log("Getting coins for Phone: " + phone + ", ShopId: " + shopId);
+        // Find the user
+        const user = yield index_1.prisma.user.findFirst({
+            where: { phone }
         });
-        return res.status(200).json({ message: availabe === null || availabe === void 0 ? void 0 : availabe.coinsAvailable });
-    }
-    catch (e) {
-        console.error("error while checking coin" + e);
-        return res.status(500).json({ message: "error" });
-    }
-}));
-exports.shopRouter.post("/updatecoinss", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    let { updatedCoin, phone } = req.body;
-    phone = '+91' + phone;
-    console.log("updated coin" + updatedCoin);
-    updatedCoin = parseInt(updatedCoin);
-    console.log("updating coins");
-    let succ = 0;
-    try {
-        const response = yield index_1.prisma.user.update({
+        if (!user) {
+            console.log("User not found");
+            return res.status(404).json({ message: 0 });
+        }
+        // Get all coins earned FROM this specific shop
+        const coinsEarnedFromShop = yield index_1.prisma.shopToUserCoin.findMany({
             where: {
-                phone
-            },
-            data: {
-                coinsAvailable: updatedCoin
+                userId: user.id,
+                shopId: shopId
             }
         });
-        if (response) {
-            console.log(response);
-            succ = 1;
-        }
-        return res.status(200).json({ "succ": succ });
+        // Get all coins spent AT this specific shop  
+        const coinsSpentAtShop = yield index_1.prisma.userToShopCoin.findMany({
+            where: {
+                userId: user.id,
+                shopId: shopId
+            }
+        });
+        // Calculate totals
+        const totalEarned = coinsEarnedFromShop.reduce((sum, transaction) => sum + transaction.volume, 0);
+        const totalSpent = coinsSpentAtShop.reduce((sum, transaction) => sum + transaction.volume, 0);
+        const availableFromThisShop = Math.max(0, totalEarned - totalSpent);
+        console.log(`User ${user.id} at Shop ${shopId}: Earned ${totalEarned}, Spent ${totalSpent}, Available: ${availableFromThisShop}`);
+        return res.status(200).json({ message: availableFromThisShop });
     }
     catch (e) {
-        console.error(e);
-        return res.json({ succ });
+        console.error("Error while checking shop-specific coins: " + e);
+        return res.status(500).json({ message: 0 });
     }
 }));
+// Route 2: Update user's total coins after spending shop-specific coins
+exports.shopRouter.post("/updatecoinss", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        let { updatedCoin, phone, shopId } = req.body;
+        phone = '+91' + phone;
+        updatedCoin = parseInt(updatedCoin);
+        shopId = parseInt(shopId);
+        console.log("Updating coins - Phone: " + phone + ", New total: " + updatedCoin + ", ShopId: " + shopId);
+        // Find the user
+        const user = yield index_1.prisma.user.findFirst({
+            where: { phone }
+        });
+        if (!user) {
+            return res.status(404).json({ succ: 0 });
+        }
+        const originalTotalCoins = user.coinsAvailable || 0;
+        const coinsSpent = originalTotalCoins - updatedCoin;
+        console.log(`User ${user.id}: Original total ${originalTotalCoins}, New total: ${updatedCoin}, Coins spent: ${coinsSpent}`);
+        // Update user's total coins
+        yield index_1.prisma.user.update({
+            where: { phone },
+            data: { coinsAvailable: updatedCoin }
+        });
+        // Record the spending transaction at this specific shop
+        if (coinsSpent > 0) {
+            yield index_1.prisma.userToShopCoin.create({
+                data: {
+                    userId: user.id,
+                    shopId: shopId,
+                    volume: coinsSpent
+                }
+            });
+            console.log(`Recorded: User ${user.id} spent ${coinsSpent} coins at Shop ${shopId}`);
+        }
+        return res.status(200).json({ succ: 1 });
+    }
+    catch (e) {
+        console.error("Error updating coins: " + e);
+        return res.status(500).json({ succ: 0 });
+    }
+}));
+exports.shopRouter.post("/addcoins", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        let { phone, totalAmount, shopId } = req.body;
+        phone = '+91' + phone;
+        totalAmount = parseFloat(totalAmount);
+        shopId = parseInt(shopId);
+        // Calculate coins to add (0.1 coin per rupee, rounded down)
+        const coinsToAdd = Math.floor(totalAmount * 0.1);
+        console.log(`Adding coins for purchase - Phone: ${phone}, Amount: ${totalAmount}, Shop: ${shopId}, Coins to add: ${coinsToAdd}`);
+        if (coinsToAdd <= 0) {
+            return res.status(200).json({
+                succ: 1,
+                message: "No coins to add (amount too small)",
+                coinsAdded: 0
+            });
+        }
+        // Find the user
+        const user = yield index_1.prisma.user.findFirst({
+            where: { phone }
+        });
+        if (!user) {
+            return res.status(404).json({ succ: 0, message: "User not found" });
+        }
+        const currentTotalCoins = user.coinsAvailable || 0;
+        const newTotalCoins = currentTotalCoins + coinsToAdd;
+        // Update user's total coins
+        yield index_1.prisma.user.update({
+            where: { phone },
+            data: {
+                coinsAvailable: newTotalCoins
+            }
+        });
+        // Create entry in ShopToUserCoin table (coins earned FROM this shop)
+        yield index_1.prisma.shopToUserCoin.create({
+            data: {
+                shopId: shopId,
+                userId: user.id,
+                volume: coinsToAdd
+            }
+        });
+        console.log(`Success: User ${user.id} earned ${coinsToAdd} coins from Shop ${shopId}. Total coins: ${currentTotalCoins} → ${newTotalCoins}`);
+        return res.status(200).json({
+            succ: 1,
+            message: "Coins added successfully",
+            coinsAdded: coinsToAdd,
+            previousTotal: currentTotalCoins,
+            newTotal: newTotalCoins
+        });
+    }
+    catch (e) {
+        console.error("Error adding coins: " + e);
+        return res.status(500).json({ succ: 0, message: "Error adding coins" });
+    }
+}));
+// shopRouter.post("/orders", async (req, res): Promise<any> => {
+//   const { shopId } = req.body;
+//   try {
+//     // Get order groups with their associated orders
+//     const orderGroups = await prisma.orderGroup.findMany({
+//       where: {
+//         shopId: parseInt(shopId)
+//       },
+//       include: {
+//         user: {
+//           select: {
+//             id: true,
+//             name: true,
+//             username: true,
+//             phone: true,
+//             localArea: true
+//           }
+//         },
+//         shop: {
+//           select: {
+//             id: true,
+//             name: true,
+//             tagline: true,
+//             coinValue: true,
+//             localArea: true
+//           }
+//         },
+//         orders: {
+//           include: {
+//             product: {
+//               select: {
+//                 id: true,
+//                 name: true,
+//                 price: true,
+//                 image: true,
+//               }
+//             },
+//             offer: {
+//               select: {
+//                 id: true,
+//                 type: true,
+//                 title: true,
+//                 description: true,
+//                 percentage: true,
+//                 fixed: true,
+//                 coinValue: true
+//               }
+//             }
+//           }
+//         }
+//       },
+//       orderBy: {
+//         createdAt: 'desc'
+//       }
+//     });
+//     // Transform order groups to include calculated totals and offer applications
+//     const transformedOrderGroups = orderGroups.map(orderGroup => {
+//       let totalBeforeAllOffers = 0; // NEW: Sum of (unitPrice * quantity) for all non-free items
+//       let totalDiscountFromMoneyOffers = 0; // For money-type offers
+//       //@ts-ignore
+//       let percentageOfferApplied = null; // To track if a percentage offer exists and its value
+//       //@ts-ignore
+//       let freeProducts = [];
+//       const processedOrders = orderGroup.orders.map(order => {
+//         const product = order.product;
+//         const offer = order.offer;
+//         let itemBasePrice = order.unitPrice * order.quantity; // Base price for the item
+//         let itemDiscount = 0;
+//         let isFree = false;
+//         // Add to totalBeforeAllOffers only if it's not a free product
+//         if (offer?.type !== 'product') {
+//           totalBeforeAllOffers += itemBasePrice;
+//         }
+//         // Apply item-specific offers (only 'money' and 'product' types initially)
+//         if (offer) {
+//           switch (offer.type) {
+//             case 'product':
+//               isFree = true;
+//               itemBasePrice = 0; // Free item contributes 0 to its own total
+//               freeProducts.push({
+//                 ...product,
+//                 quantity: order.quantity,
+//                 offerTitle: offer.title
+//               });
+//               break;
+//             case 'money':
+//               itemDiscount = Math.min(offer.fixed || 0, itemBasePrice); // Discount cannot exceed item's base price
+//               totalDiscountFromMoneyOffers += itemDiscount; // Accumulate money discounts
+//               break;
+//             case 'percentage':
+//               // We'll handle percentage discounts on the total, but we need to know if one exists
+//               //@ts-ignore
+//               if (offer.percentage !== undefined && percentageOfferApplied === null) {
+//                 percentageOfferApplied = offer.percentage;
+//               }
+//               // Do NOT apply percentage discount here on item-level
+//               break;
+//           }
+//         }
+//         return {
+//           ...order,
+//           product,
+//           offer,
+//           itemBasePrice: Math.round(itemBasePrice * 100) / 100, // Keep base price for display if needed
+//           itemDiscount: Math.round(itemDiscount * 100) / 100,
+//           isFree,
+//           // itemTotal here is the price *after* item-specific money discounts, but before global percentage
+//           itemTotal: Math.round((itemBasePrice - itemDiscount) * 100) / 100,
+//         };
+//       });
+//       // Calculate subtotal after item-level money discounts
+//       let subtotalAfterItemMoneyDiscounts = totalBeforeAllOffers - totalDiscountFromMoneyOffers;
+//       // Apply percentage discount on the total subtotal if a percentage offer was found
+//       let totalPercentageDiscount = 0;
+//       if (percentageOfferApplied !== null) {
+//         totalPercentageDiscount = (subtotalAfterItemMoneyDiscounts * percentageOfferApplied) / 100;
+//         subtotalAfterItemMoneyDiscounts -= totalPercentageDiscount; // Apply this discount
+//       }
+//       let subtotalAfterAllOffers = subtotalAfterItemMoneyDiscounts; // RENAMED: This is the subtotal after all offers
+//       // Calculate coin discount if coins were used
+//       let coinDiscount = 0;
+//       if (orderGroup.coinsUsed > 0) {
+//         const coinValue = orderGroup.shop.coinValue; // Value of 100 coins
+//         const singleCoinValue = coinValue / 100;
+//         coinDiscount = orderGroup.coinsUsed * singleCoinValue;
+//       }
+//       // Final Total calculation with rounding up if decimal (e.g., 22.2 becomes 23)
+//       const finalTotal = Math.ceil(subtotalAfterAllOffers - coinDiscount);
+//       // Calculate coins to be credited (0.1 coins per rupee, minimum 1 coin)
+//       const coinsToCredit = Math.floor(finalTotal * 0.1);
+//       return {
+//         id: orderGroup.id,
+//         userId: orderGroup.userId,
+//         shopId: orderGroup.shopId,
+//         status: orderGroup.status,
+//         createdAt: orderGroup.createdAt,
+//         updatedAt: orderGroup.updatedAt,
+//         soldOffline: orderGroup.soldOffline,
+//         consumer: orderGroup.user,
+//         shop: orderGroup.shop,
+//         orders: processedOrders, // All original order items including free ones, with `isFree` flag
+//         //@ts-ignore
+//         freeProducts, // Only the items given free by product offers
+//         totalBeforeAllOffers: Math.round(totalBeforeAllOffers * 100) / 100, // NEW FIELD
+//         subtotalAfterOffers: Math.round(subtotalAfterAllOffers * 100) / 100, // RENAMED
+//         totalDiscount: Math.round((totalDiscountFromMoneyOffers + totalPercentageDiscount) * 100) / 100,
+//         coinsUsed: orderGroup.coinsUsed,
+//         coinDiscount: Math.round(coinDiscount * 100) / 100,
+//         finalTotal, // This is already rounded up if decimal
+//         coinsToCredit: coinsToCredit >= 1 ? coinsToCredit : 0
+//       };
+//     });
+//     return res.status(200).json({ message: transformedOrderGroups });
+//   } catch (e) {
+//     console.error(e + " error occurred");
+//     return res.status(502).json({ message: "error while db call" });
+//   }
+// });
+// shopRouter.post("/orders/update-status", async (req, res): Promise<any> => {
+//   const { orderId, status } = req.body;
+//   console.log("updating order status");
+//   try {
+//     const orderGroup = await prisma.orderGroup.findUnique({
+//       where: { id: parseInt(orderId) },
+//       include: {
+//         orders: {
+//           include: {
+//             product: true,
+//             offer: true
+//           }
+//         },
+//         shop: {
+//           select: {
+//             coinValue: true
+//           }
+//         }
+//       }
+//     });
+//     if (!orderGroup) {
+//       return res.status(404).json({ message: "Order not found" });
+//     }
+//     // Update order status
+//     await prisma.orderGroup.update({
+//       where: { id: parseInt(orderId) },
+//       data: { status }
+//     });
+//     if (status === 'CONFIRMED') {
+//       // Update inventory for all products in the order
+//       // This correctly decrements quantity for all items, including free ones,
+//       // as long as they are present in orderGroup.orders
+//       for (const order of orderGroup.orders) {
+//         await prisma.product.update({
+//           where: { id: order.productId },
+//           data: {
+//             quantity: {
+//               decrement: order.quantity
+//             }
+//           }
+//         });
+//       }
+//       // Recalculate totals for coin crediting (mirroring the /orders endpoint logic)
+//       let totalBeforeAllOffersForCredit = 0;
+//       let totalDiscountFromMoneyOffersForCredit = 0;
+//       //@ts-ignore
+//       let percentageOfferAppliedForCredit = null;
+//       orderGroup.orders.forEach(order => {
+//         const offer = order.offer;
+//         let itemBasePrice = order.unitPrice * order.quantity;
+//         if (offer?.type !== 'product') {
+//           totalBeforeAllOffersForCredit += itemBasePrice;
+//         }
+//         if (offer) {
+//           switch (offer.type) {
+//             case 'money':
+//               totalDiscountFromMoneyOffersForCredit += Math.min(offer.fixed || 0, itemBasePrice);
+//               break;
+//             case 'percentage':
+//               //@ts-ignore
+//               if (offer.percentage !== undefined && percentageOfferAppliedForCredit === null) {
+//                 percentageOfferAppliedForCredit = offer.percentage;
+//               }
+//               break;
+//           }
+//         }
+//       });
+//       let subtotalAfterItemMoneyDiscountsForCredit = totalBeforeAllOffersForCredit - totalDiscountFromMoneyOffersForCredit;
+//       let totalPercentageDiscountForCredit = 0;
+//       if (percentageOfferAppliedForCredit !== null) {
+//         totalPercentageDiscountForCredit = (subtotalAfterItemMoneyDiscountsForCredit * percentageOfferAppliedForCredit) / 100;
+//         subtotalAfterItemMoneyDiscountsForCredit -= totalPercentageDiscountForCredit;
+//       }
+//       let finalSubtotalForCredit = subtotalAfterItemMoneyDiscountsForCredit;
+//       let coinDiscount = 0;
+//       if (orderGroup.coinsUsed > 0) {
+//         const coinValue = orderGroup.shop.coinValue;
+//         const singleCoinValue = coinValue / 100;
+//         coinDiscount = orderGroup.coinsUsed * singleCoinValue;
+//       }
+//       // Apply Math.ceil here for consistency with the /orders calculation
+//       const finalTotalForCredit = Math.ceil(finalSubtotalForCredit - coinDiscount);
+//       const coinsToCredit = Math.floor(finalTotalForCredit * 0.1);
+//       if (coinsToCredit >= 1) {
+//         await prisma.user.update({
+//           //@ts-ignore
+//           where: { id: orderGroup.userId },
+//           data: {
+//             coinsAvailable: {
+//               increment: coinsToCredit
+//             }
+//           }
+//         });
+//         await prisma.shopToUserCoin.create({
+//           data: {
+//             shopId: orderGroup.shopId,
+//             //@ts-ignore
+//             userId: orderGroup.userId,
+//             volume: coinsToCredit
+//           }
+//         });
+//       }
+//     } else if (status === 'CANCELLED' && orderGroup.coinsUsed > 0) {
+//       // Refund coins if order is cancelled and coins were used
+//       await prisma.user.update({
+//         //@ts-ignore
+//         where: { id: orderGroup.userId },
+//         data: {
+//           coinsAvailable: {
+//             increment: orderGroup.coinsUsed
+//           }
+//         }
+//       });
+//       await prisma.shopToUserCoin.create({
+//         data: {
+//           shopId: orderGroup.shopId,
+//           //@ts-ignore
+//           userId: orderGroup.userId,
+//           volume: orderGroup.coinsUsed
+//         }
+//       });
+//     }
+//     return res.status(200).json({ message: "Order status updated successfully" });
+//   } catch (e) {
+//     console.error(e + " error occurred");
+//     return res.status(502).json({ message: "error while updating order status" });
+//   }
+// });
+exports.shopRouter.post("/orders", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shopId } = req.body;
+    try {
+        // Get order groups with their associated orders
+        const orderGroups = yield index_1.prisma.orderGroup.findMany({
+            where: {
+                shopId: parseInt(shopId)
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        username: true,
+                        phone: true,
+                        localArea: true
+                    }
+                },
+                shop: {
+                    select: {
+                        id: true,
+                        name: true,
+                        tagline: true,
+                        coinValue: true,
+                        localArea: true
+                    }
+                },
+                orders: {
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                name: true,
+                                price: true,
+                                image: true,
+                            }
+                        },
+                        offer: {
+                            select: {
+                                id: true,
+                                type: true,
+                                title: true,
+                                description: true,
+                                percentage: true,
+                                fixed: true,
+                                coinValue: true,
+                                product: true // Include the product field from offer
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        // Transform order groups to include calculated totals and offer applications
+        const transformedOrderGroups = orderGroups.map(orderGroup => {
+            let totalBeforeAllOffers = 0;
+            let totalDiscountFromMoneyOffers = 0;
+            let totalDiscountFromProductOffers = 0;
+            //@ts-ignore
+            let percentageOfferApplied = null;
+            let freeProductsFromOffers = []; // Store free products from offers
+            const processedOrders = orderGroup.orders.map(order => {
+                const product = order.product;
+                const offer = order.offer;
+                let itemBasePrice = order.unitPrice * order.quantity;
+                let itemDiscount = 0;
+                // Always add to totalBeforeAllOffers
+                totalBeforeAllOffers += itemBasePrice;
+                // Apply item-specific offers
+                if (offer) {
+                    switch (offer.type) {
+                        case 'product':
+                            // For product offers, don't make the ordered item free
+                            // Instead, we'll add a separate free product later
+                            // The ordered item remains at full price
+                            break;
+                        case 'money':
+                            itemDiscount = Math.min(offer.fixed || 0, itemBasePrice);
+                            totalDiscountFromMoneyOffers += itemDiscount;
+                            break;
+                        case 'percentage':
+                            //@ts-ignore
+                            if (offer.percentage !== undefined && percentageOfferApplied === null) {
+                                percentageOfferApplied = offer.percentage;
+                            }
+                            break;
+                    }
+                }
+                return Object.assign(Object.assign({}, order), { product,
+                    offer, itemBasePrice: Math.round(itemBasePrice * 100) / 100, itemDiscount: Math.round(itemDiscount * 100) / 100, isFree: false, itemTotal: Math.round((itemBasePrice - itemDiscount) * 100) / 100 });
+            });
+            // Now handle product offers by creating separate free products
+            const productOffersMap = new Map(); // Track free products to avoid duplicates
+            orderGroup.orders.forEach(order => {
+                if (order.offer && order.offer.type === 'product' && order.offer.product) {
+                    const freeProductId = order.offer.product;
+                    // Only add one free product per offer type, regardless of how many orders have this offer
+                    if (!productOffersMap.has(freeProductId)) {
+                        // Get product details for the free product
+                        // We need to fetch this product's details
+                        productOffersMap.set(freeProductId, {
+                            productId: freeProductId,
+                            offerId: order.offer.id,
+                            offerTitle: order.offer.title,
+                            quantity: 1 // Always 1 free item
+                        });
+                    }
+                }
+            });
+            // Convert productOffersMap to freeProducts array
+            // Note: We'll need to fetch product details for free products
+            const freeProducts = Array.from(productOffersMap.values());
+            // Calculate subtotal after item-level discounts
+            let subtotalAfterItemDiscounts = totalBeforeAllOffers - totalDiscountFromMoneyOffers - totalDiscountFromProductOffers;
+            // Apply percentage discount if exists
+            let totalPercentageDiscount = 0;
+            if (percentageOfferApplied !== null) {
+                totalPercentageDiscount = (subtotalAfterItemDiscounts * percentageOfferApplied) / 100;
+                subtotalAfterItemDiscounts -= totalPercentageDiscount;
+            }
+            let subtotalAfterAllOffers = subtotalAfterItemDiscounts;
+            // Calculate coin discount
+            let coinDiscount = 0;
+            if (orderGroup.coinsUsed > 0) {
+                const coinValue = orderGroup.shop.coinValue;
+                const singleCoinValue = coinValue / 100;
+                coinDiscount = orderGroup.coinsUsed * singleCoinValue;
+            }
+            // Final Total calculation
+            const finalTotal = Math.ceil(subtotalAfterAllOffers - coinDiscount);
+            // Calculate coins to be credited
+            const coinsToCredit = Math.floor(finalTotal * 0.1);
+            return {
+                id: orderGroup.id,
+                userId: orderGroup.userId,
+                shopId: orderGroup.shopId,
+                status: orderGroup.status,
+                createdAt: orderGroup.createdAt,
+                updatedAt: orderGroup.updatedAt,
+                soldOffline: orderGroup.soldOffline,
+                consumer: orderGroup.user,
+                shop: orderGroup.shop,
+                orders: processedOrders,
+                freeProducts, // Products that are free due to offers
+                totalBeforeAllOffers: Math.round(totalBeforeAllOffers * 100) / 100,
+                subtotalAfterOffers: Math.round(subtotalAfterAllOffers * 100) / 100,
+                totalDiscount: Math.round((totalDiscountFromMoneyOffers + totalDiscountFromProductOffers + totalPercentageDiscount) * 100) / 100,
+                coinsUsed: orderGroup.coinsUsed,
+                coinDiscount: Math.round(coinDiscount * 100) / 100,
+                finalTotal,
+                coinsToCredit: coinsToCredit >= 1 ? coinsToCredit : 0
+            };
+        });
+        // Now we need to fetch product details for free products
+        for (let orderGroup of transformedOrderGroups) {
+            if (orderGroup.freeProducts.length > 0) {
+                const freeProductIds = orderGroup.freeProducts.map(fp => fp.productId);
+                const products = yield index_1.prisma.product.findMany({
+                    where: {
+                        id: { in: freeProductIds }
+                    },
+                    select: {
+                        id: true,
+                        name: true,
+                        price: true,
+                        image: true
+                    }
+                });
+                // Enrich free products with product details
+                orderGroup.freeProducts = orderGroup.freeProducts.map(fp => {
+                    const productDetails = products.find(p => p.id === fp.productId);
+                    return {
+                        id: fp.productId,
+                        name: (productDetails === null || productDetails === void 0 ? void 0 : productDetails.name) || 'Unknown Product',
+                        image: productDetails === null || productDetails === void 0 ? void 0 : productDetails.image,
+                        quantity: fp.quantity,
+                        unitPrice: (productDetails === null || productDetails === void 0 ? void 0 : productDetails.price) || 0,
+                        offerTitle: fp.offerTitle || 'Free Item',
+                        isFree: true
+                    };
+                });
+            }
+        }
+        return res.status(200).json({ message: transformedOrderGroups });
+    }
+    catch (e) {
+        console.error(e + " error occurred");
+        return res.status(502).json({ message: "error while db call" });
+    }
+}));
+exports.shopRouter.post("/orders/update-status", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { orderId, status } = req.body;
+    try {
+        // Use a transaction to ensure all operations succeed or fail together
+        const result = yield index_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+            var _a;
+            if (status === "CONFIRMED") {
+                // Get order details first
+                const orderGroup = yield tx.orderGroup.findUnique({
+                    where: { id: parseInt(orderId) },
+                    include: {
+                        orders: {
+                            include: {
+                                product: true,
+                                offer: {
+                                    select: {
+                                        id: true,
+                                        type: true,
+                                        product: true, // Include product field from offer
+                                        coinValue: true // Include coinValue for product offers
+                                    }
+                                }
+                            }
+                        },
+                        shop: true, // Include shop details to get coinValue
+                        user: true // Include user details
+                    }
+                });
+                if (!orderGroup) {
+                    throw new Error("Order not found");
+                }
+                console.log(`Processing order confirmation for Order ID: ${orderId}`);
+                console.log(`Order belongs to user: ${orderGroup.userId}`);
+                console.log(`OrderGroup data:`, {
+                    id: orderGroup.id,
+                    totalAmount: orderGroup.totalAmount,
+                    //@ts-ignore
+                    finalTotal: orderGroup.finalTotal,
+                    coinsUsed: orderGroup.coinsUsed
+                });
+                console.log(`Shop coin value: ${(_a = orderGroup.shop) === null || _a === void 0 ? void 0 : _a.coinValue}`);
+                // Track free products to avoid duplicate inventory deductions
+                const freeProductsDeducted = new Set();
+                // Update inventory for each order item
+                for (const order of orderGroup.orders) {
+                    // Update inventory for the ordered product (normal order)
+                    yield tx.product.update({
+                        where: { id: order.productId },
+                        data: {
+                            quantity: {
+                                decrement: order.quantity
+                            }
+                        }
+                    });
+                    // If this order has a product offer, deduct inventory for the free product too
+                    if (order.offer && order.offer.type === 'product' && order.offer.product) {
+                        const freeProductId = order.offer.product;
+                        // Only deduct once per free product, even if multiple orders have the same offer
+                        if (!freeProductsDeducted.has(freeProductId)) {
+                            yield tx.product.update({
+                                where: { id: freeProductId },
+                                data: {
+                                    quantity: {
+                                        decrement: 1 // Always deduct 1 for free product
+                                    }
+                                }
+                            });
+                            freeProductsDeducted.add(freeProductId);
+                        }
+                    }
+                }
+                // **COIN CREDIT LOGIC**
+                if (orderGroup.userId && orderGroup.totalAmount > 0) {
+                    const shop = orderGroup.shop;
+                    // Use totalAmount instead of finalTotal, or calculate it if needed
+                    let totalAmount = orderGroup.totalAmount || 0;
+                    // If finalTotal exists and is valid, use it instead
+                    //@ts-ignore
+                    if (orderGroup.finalTotal && orderGroup.finalTotal > 0) {
+                        //@ts-ignore
+                        totalAmount = orderGroup.finalTotal;
+                    }
+                    console.log(`Calculating coins for amount: ₹${totalAmount}`);
+                    // Calculate coins to credit: 1 coin for every 10 rupees (10 coins per 100 rupees)
+                    let coinsToCredit = Math.floor(totalAmount / 10);
+                    // Ensure minimum 1 coin if the order amount is at least equal to the shop's coinValue
+                    if (coinsToCredit === 0 && totalAmount >= shop.coinValue) {
+                        coinsToCredit = 1;
+                    }
+                    console.log(`Coins to credit: ${coinsToCredit}`);
+                    // Only credit coins if there are coins to credit
+                    if (coinsToCredit > 0) {
+                        // Get current user coin balance for logging
+                        const currentUser = yield tx.user.findUnique({
+                            where: { id: orderGroup.userId },
+                            select: { coinsAvailable: true }
+                        });
+                        console.log(`User current coins: ${(currentUser === null || currentUser === void 0 ? void 0 : currentUser.coinsAvailable) || 0}`);
+                        // Update user's coin balance
+                        const updatedUser = yield tx.user.update({
+                            where: { id: orderGroup.userId },
+                            data: {
+                                coinsAvailable: {
+                                    increment: coinsToCredit
+                                }
+                            },
+                            select: { coinsAvailable: true }
+                        });
+                        console.log(`User coins after update: ${updatedUser.coinsAvailable}`);
+                        // Create entry in ShopToUserCoin table to track the transaction
+                        const coinTransaction = yield tx.shopToUserCoin.create({
+                            data: {
+                                shopId: orderGroup.shopId,
+                                userId: orderGroup.userId,
+                                volume: coinsToCredit
+                            }
+                        });
+                        console.log(`Created coin transaction with ID: ${coinTransaction.id}`);
+                        console.log(`Successfully credited ${coinsToCredit} coins to user ${orderGroup.userId} for order ${orderId}`);
+                    }
+                    else {
+                        console.log(`No coins credited - calculated coins: ${coinsToCredit}, amount: ${totalAmount}, shop coin value: ${shop.coinValue}`);
+                    }
+                }
+                else {
+                    //@ts-ignore
+                    console.log(`Coin credit skipped - userId: ${orderGroup.userId}, totalAmount: ${orderGroup.totalAmount}, finalTotal: ${orderGroup.finalTotal}`);
+                }
+            }
+            // **CANCELLATION LOGIC**
+            if (status === "CANCELLED") {
+                // Get order details for cancellation
+                const orderGroup = yield tx.orderGroup.findUnique({
+                    where: { id: parseInt(orderId) },
+                    include: {
+                        orders: {
+                            include: {
+                                product: true,
+                                offer: {
+                                    select: {
+                                        id: true,
+                                        type: true,
+                                        product: true,
+                                        coinValue: true // Coins required for product offers
+                                    }
+                                }
+                            }
+                        },
+                        shop: true,
+                        user: true
+                    }
+                });
+                if (!orderGroup) {
+                    throw new Error("Order not found");
+                }
+                console.log(`Processing order cancellation for Order ID: ${orderId}`);
+                console.log(`Order belongs to user: ${orderGroup.userId}`);
+                let totalCoinsToRefund = 0;
+                // 1. Refund coins used for product offers
+                for (const order of orderGroup.orders) {
+                    if (order.offer && order.offer.type === 'product' && order.offer.coinValue) {
+                        const coinsUsedForOffer = order.offer.coinValue;
+                        totalCoinsToRefund += coinsUsedForOffer;
+                        console.log(`Refunding ${coinsUsedForOffer} coins for product offer ID: ${order.offer.id}`);
+                    }
+                }
+                // 2. Refund coins directly used for order payment
+                if (orderGroup.coinsUsed > 0) {
+                    totalCoinsToRefund += orderGroup.coinsUsed;
+                    console.log(`Refunding ${orderGroup.coinsUsed} coins used for order payment`);
+                }
+                // Process coin refund if there are coins to refund
+                if (totalCoinsToRefund > 0 && orderGroup.userId) {
+                    // Get current user coin balance for logging
+                    const currentUser = yield tx.user.findUnique({
+                        where: { id: orderGroup.userId },
+                        select: { coinsAvailable: true }
+                    });
+                    console.log(`User current coins before refund: ${(currentUser === null || currentUser === void 0 ? void 0 : currentUser.coinsAvailable) || 0}`);
+                    // Update user's coin balance
+                    const updatedUser = yield tx.user.update({
+                        where: { id: orderGroup.userId },
+                        data: {
+                            coinsAvailable: {
+                                increment: totalCoinsToRefund
+                            }
+                        },
+                        select: { coinsAvailable: true }
+                    });
+                    console.log(`User coins after refund: ${updatedUser.coinsAvailable}`);
+                    // Create entry in ShopToUserCoin table to track the refund transaction
+                    // Note: This represents shop giving coins back to user (refund)
+                    const refundTransaction = yield tx.shopToUserCoin.create({
+                        data: {
+                            shopId: orderGroup.shopId,
+                            userId: orderGroup.userId,
+                            volume: totalCoinsToRefund
+                        }
+                    });
+                    console.log(`Created refund transaction with ID: ${refundTransaction.id}`);
+                    console.log(`Successfully refunded ${totalCoinsToRefund} coins to user ${orderGroup.userId} for cancelled order ${orderId}`);
+                }
+                else {
+                    console.log(`No coins to refund - totalCoinsToRefund: ${totalCoinsToRefund}, userId: ${orderGroup.userId}`);
+                }
+                // Restore inventory for cancelled orders
+                const freeProductsRestored = new Set();
+                for (const order of orderGroup.orders) {
+                    // Restore inventory for the ordered product
+                    yield tx.product.update({
+                        where: { id: order.productId },
+                        data: {
+                            quantity: {
+                                increment: order.quantity
+                            }
+                        }
+                    });
+                    // If this order had a product offer, restore inventory for the free product too
+                    if (order.offer && order.offer.type === 'product' && order.offer.product) {
+                        const freeProductId = order.offer.product;
+                        // Only restore once per free product
+                        if (!freeProductsRestored.has(freeProductId)) {
+                            yield tx.product.update({
+                                where: { id: freeProductId },
+                                data: {
+                                    quantity: {
+                                        increment: 1
+                                    }
+                                }
+                            });
+                            freeProductsRestored.add(freeProductId);
+                        }
+                    }
+                }
+                console.log(`Restored inventory for cancelled order ${orderId}`);
+            }
+            // Update order status
+            const updatedOrderGroup = yield tx.orderGroup.update({
+                where: { id: parseInt(orderId) },
+                data: { status }
+            });
+            return updatedOrderGroup;
+        }));
+        return res.status(200).json({
+            message: "Order status updated successfully",
+            orderGroup: result
+        });
+    }
+    catch (e) {
+        console.error("Error updating order status:", e);
+        // Check if it's a specific Prisma error
+        //@ts-ignore
+        if (e.code === 'P2025') {
+            return res.status(404).json({ message: "Order not found" });
+        }
+        return res.status(502).json({
+            message: "Error updating order status",
+            //@ts-ignore
+            error: process.env.NODE_ENV === 'development' ? e.message : undefined
+        });
+    }
+}));
+//@ts-ignore
+// shopRouter.post("/orders/update-status", async (req, res)  : Promise <any>=> {
+//   const { orderId, status } = req.body;
+//   console.log("updating order status");
+//   try {
+//     const orderGroup = await prisma.orderGroup.findUnique({
+//       where: { id: parseInt(orderId) },
+//       include: {
+//         orders: {
+//           include: {
+//             product: true,
+//             offer: true
+//           }
+//         },
+//         shop: {
+//           select: {
+//             coinValue: true
+//           }
+//         }
+//       }
+//     });
+//     if (!orderGroup) {
+//       return res.status(404).json({ message: "Order not found" });
+//     }
+//     // Update order status
+//     await prisma.orderGroup.update({
+//       where: { id: parseInt(orderId) },
+//       data: { status }
+//     });
+//     if (status === 'CONFIRMED') {
+//       // Update inventory for all products in the order
+//       for (const order of orderGroup.orders) {
+//         await prisma.product.update({
+//           where: { id: order.productId },
+//           data: {
+//             quantity: {
+//               decrement: order.quantity
+//             }
+//           }
+//         });
+//       }
+//       // Credit coins to user if applicable
+//       let subtotal = 0;
+//       orderGroup.orders.forEach(order => {
+//         if (!order.offer || order.offer.type !== 'product') {
+//           let itemTotal = order.unitPrice * order.quantity;
+//           // Apply percentage or money discounts
+//           if (order.offer) {
+//             if (order.offer.type === 'percentage') {
+//                     //@ts-ignore
+//               itemTotal = itemTotal - (itemTotal * order.offer.percentage) / 100;
+//             } else if (order.offer.type === 'money') {
+//               itemTotal = itemTotal - (order.offer.fixed || 0);
+//             }
+//           }
+//           subtotal += itemTotal;
+//         }
+//       });
+//       // Deduct coin discount
+//       let coinDiscount = 0;
+//       if (orderGroup.coinsUsed > 0) {
+//         const coinValue = orderGroup.shop.coinValue;
+//         const singleCoinValue = coinValue / 100;
+//         coinDiscount = orderGroup.coinsUsed * singleCoinValue;
+//       }
+//       const finalTotal = Math.round(subtotal - coinDiscount);
+//       const coinsToCredit = Math.floor(finalTotal * 0.1);
+//       if (coinsToCredit >= 1) {
+//         // Credit coins to user
+//         await prisma.user.update({
+//                 //@ts-ignore
+//           where: { id: orderGroup.userId },
+//           data: {
+//             coinsAvailable: {
+//               increment: coinsToCredit
+//             }
+//           }
+//         });
+//         // Record the coin transaction
+//         await prisma.shopToUserCoin.create({
+//           data: {
+//             shopId: orderGroup.shopId,
+//                   //@ts-ignore
+//             userId: orderGroup.userId,
+//             volume: coinsToCredit
+//           }
+//         });
+//       }
+//     } else if (status === 'CANCELLED' && orderGroup.coinsUsed > 0) {
+//       // Refund coins if order is cancelled and coins were used
+//       await prisma.user.update({
+//               //@ts-ignore
+//         where: { id: orderGroup.userId },
+//         data: {
+//           coinsAvailable: {
+//             increment: orderGroup.coinsUsed
+//           }
+//         }
+//       });
+//       // Record the coin refund transaction
+//       await prisma.shopToUserCoin.create({
+//         data: {
+//           shopId: orderGroup.shopId,
+//           //@ts-ignore
+//           userId: orderGroup.userId,
+//           volume: orderGroup.coinsUsed
+//         }
+//       });
+//     }
+//     return res.status(200).json({ message: "Order status updated successfully" });
+//   } catch (e) {
+//     console.error(e + " error occurred");
+//     return res.status(502).json({ message: "error while updating order status" });
+//   }
+// });
